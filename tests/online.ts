@@ -19,20 +19,25 @@ await mkdir(join(home, ".claude"), { recursive: true });
 const core = process.env.SIU_GUI_CORE || resourceBinPath(HOST);
 const checks: { name: string; ok: boolean; error?: string }[] = [];
 function start(offline = false) {
+  const proxyEnv = { ...process.env };
+  if (process.env.SIU_TEST_SYSTEM_PROXY_ONLY === "1") {
+    for (const key of ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]) {
+      delete proxyEnv[key];
+      delete proxyEnv[key.toLowerCase()];
+    }
+  }
+  if (offline) {
+    for (const key of ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]) {
+      proxyEnv[key] = proxyEnv[key.toLowerCase()] = "http://127.0.0.1:9";
+    }
+    proxyEnv.NO_PROXY = proxyEnv.no_proxy = "";
+  }
   const child = spawn(core, [], {
     cwd: REPO_ROOT,
     env: {
-      ...process.env,
+      ...proxyEnv,
       SIU_GUI_TEST_HOME: home,
       SIU_GUI_ROOT: join(home, ".siu"),
-      ...(offline
-        ? {
-            HTTP_PROXY: "http://127.0.0.1:9",
-            HTTPS_PROXY: "http://127.0.0.1:9",
-            ALL_PROXY: "http://127.0.0.1:9",
-            NO_PROXY: "",
-          }
-        : {}),
     },
     stdio: "pipe",
   });
@@ -111,6 +116,23 @@ async function check(name: string, action: () => Promise<void>) {
 }
 try {
   let catalog: Discovery;
+  await check(
+    "Proxy settings switch live without restarting the core",
+    async () => {
+      await session.request("set_proxy_settings", {
+        proxy: { mode: "custom", url: "http://127.0.0.1:9", noProxy: "" },
+      });
+      await assert.rejects(
+        session.request("scan_skills", {
+          source: "vercel-labs/agent-skills",
+        }),
+        /codeload\.github\.com/,
+      );
+      await session.request("set_proxy_settings", {
+        proxy: { mode: "system", url: "", noProxy: "" },
+      });
+    },
+  );
   await check("Official MCP Registry returns live search results", async () => {
     catalog = await session.request("discover", {
       kind: "mcp",
@@ -175,6 +197,43 @@ try {
     assert.equal(result.warnings.length, 0, result.warnings.join("\n"));
     assert.ok(result.skills.length > 0);
   });
+  await check(
+    "npm and PyPI MCP version queries use the shared proxy policy",
+    async () => {
+      for (const [name, command, spec] of [
+        ["proxy-npm", "npx", "@upstash/context7-mcp@0.0.1"],
+        ["proxy-pypi", "uvx", "mcp-server-time==0.0.1"],
+      ]) {
+        await session.request("save_server", {
+          server: {
+            name,
+            transport: "stdio",
+            command,
+            args: [spec],
+            env: {},
+            url: "",
+            headers: {},
+          },
+          agents: ["claude"],
+        });
+        const updated = await session.request<MutationResult>("update", {
+          kind: "mcp",
+          name,
+        });
+        assert.equal(
+          updated.report.issues.length,
+          0,
+          updated.report.issues.join("\n"),
+        );
+        const entry = updated.snapshot.mcp.find(
+          (server) => server.name === name,
+        )!;
+        assert.notEqual(entry.args[0], spec);
+        assert.equal(entry.states.claude, "on");
+        await session.request("delete", { kind: "mcp", name });
+      }
+    },
+  );
   await check(
     "GitHub Skill scans, installs, updates and removes real linked files",
     async () => {

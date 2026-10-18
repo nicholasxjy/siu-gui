@@ -4,6 +4,7 @@ import type { AppInfo, DialogState, Kind, Snapshot, Theme } from "../types";
 import { Avatar, Icon } from "../icons";
 import { agentLabel, shortPath } from "../utils";
 import { Note } from "./Modal";
+import { ProxySettingsForm } from "./ProxySettings";
 export function AgentsPage({
   snapshot,
   busy,
@@ -225,6 +226,7 @@ export function SettingsPage({
               <span className="pill">简体中文</span>
             </div>
           </section>
+          <ProxySettingsForm busy={busy} notify={notify} />
           <section className="settings-section">
             <h2>本机数据</h2>
             <div className="setting-row">
@@ -255,17 +257,6 @@ export function SettingsPage({
                 <Icon name="folder" />
                 查看备份
               </button>
-            </div>
-            <div className="setting-row">
-              <div>
-                <h3>网络代理</h3>
-                <p>
-                  遵循 HTTP_PROXY、HTTPS_PROXY、ALL_PROXY 和 NO_PROXY 环境变量。
-                  <br />
-                  修改环境变量后需要重新启动应用。
-                </p>
-              </div>
-              <span className="pill">跟随环境变量</span>
             </div>
             <div style={{ marginTop: 16 }}>
               <Note>

@@ -20,11 +20,15 @@ Use camelCase for new DTO keys. Existing siu MCP/Skill entries keep upstream ser
 
 `MarketInput`: `{key,place:"env"|"header"|"arg",label,hint,secret:boolean,required:boolean,format:string}`. `MarketServer`: `{id,title,description,publisher,homepage,server:Server,inputs:MarketInput[],featured:boolean}`. `MarketSkill`: upstream serialized `{source,skillId,name,installs,isOfficial}`.
 
+`ProxySettings`: `{mode:"system"|"custom"|"direct",url:string,noProxy:string}`. Missing configuration defaults to `system`, empty URL and bypass list. `custom` accepts HTTP/HTTPS/SOCKS5/SOCKS5H URLs, including percent-encoded authentication, and a comma-separated hostname/IP/CIDR bypass list. Settings are stored separately in `<library root>/proxy.json`, using atomic writes and user-only Unix file permissions. Credentials are returned only by these explicit settings methods, never in snapshots or validation errors.
+
 `ScanResult`: `{token:string,source:string,skills:{name,description,path:string,installed:boolean}[]}`. A scan token owns a TempDir for downloaded GitHub sources (or a canonical local directory); retain it across calls, expire unused tokens after 30 minutes, cap at 8 retained scans and explain expired token errors. The install operation must use this retained scan instead of accepting arbitrary source paths from the frontend.
 
 ## Methods and params
 
 - `snapshot {}` -> Snapshot.
+- `proxy_settings {}` -> ProxySettings. Read saved policy, without contacting the network.
+- `set_proxy_settings {proxy:ProxySettings}` -> ProxySettings. Validate and atomically save policy without changing library entries or Agent configuration. Subsequent downloads and redirects re-evaluate routing; in-flight downloads retain their saved policy. Invalid settings do not replace the previous file. `system` resolves native OS proxies (including native PAC/WPAD on macOS/Windows) and environment variables per target URL; explicit protocol/ALL_PROXY variables take precedence, and NO_PROXY applies to system routes too. A NO_PROXY variable alone does not disable the OS proxy. `direct` ignores all proxy environment variables. `custom` uses only the saved proxy/bypass list. System PAC on other platforms requires a supported resolver; failures are explicit and can be addressed by selecting a manual proxy. Docker CLI receives the chosen proxy environment, but image transfer belongs to the Docker daemon and needs its own proxy configuration.
 - `sync {}` -> MutationResult. Explicit retry of desired state after a partial write failure.
 - `save_server {server:Server,agents:string[],oldName?:string,origin?:string}` -> MutationResult. Add or edit/rename without changing enabled state when editing. Reject unrelated unmanaged name collisions rather than overwriting them; explicit import is required.
 - `set_agents {kind:"mcp"|"skills",name:string,agents:string[]}` -> MutationResult. Retain global enabled state.

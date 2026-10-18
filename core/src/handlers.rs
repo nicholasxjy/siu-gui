@@ -58,6 +58,18 @@ fn open_store() -> Result<(env::Resolved, Store), String> {
 pub fn dispatch(app: &App, method: &str, params: &Value) -> HResult {
     match method {
         "snapshot" => h_snapshot(app),
+        "proxy_settings" => {
+            serde_json::to_value(crate::proxy::current().map_err(|e| format!("{e:#}"))?)
+                .map_err(|e| format!("{e:#}"))
+        }
+        "set_proxy_settings" => {
+            let proxy = params.get("proxy").ok_or("proxy is required")?;
+            let settings: crate::proxy::Settings =
+                serde_json::from_value(proxy.clone()).map_err(|_| "无效的代理设置".to_string())?;
+            let settings =
+                crate::proxy::save(&env::resolve().root, settings).map_err(|e| format!("{e:#}"))?;
+            serde_json::to_value(settings).map_err(|e| format!("{e:#}"))
+        }
         "sync" => h_sync(app),
         "save_server" => h_save_server(app, params),
         "set_agents" => h_set_agents(app, params),
@@ -82,7 +94,8 @@ pub fn dispatch(app: &App, method: &str, params: &Value) -> HResult {
 pub fn mutates(method: &str) -> bool {
     matches!(
         method,
-        "sync"
+        "set_proxy_settings"
+            | "sync"
             | "save_server"
             | "set_agents"
             | "set_enabled"

@@ -87,6 +87,40 @@ fn mcp_states(entry: &Value) -> &Value {
 }
 
 #[test]
+fn proxy_settings_default_persist_and_reject_bad_input_without_touching_the_library() {
+    let home = tempfile::tempdir().unwrap();
+    let mut p = Proc::start(home.path());
+    let default = json!({"mode":"system","url":"","noProxy":""});
+    assert_eq!(p.ok("proxy_settings", json!({})), default);
+    let custom =
+        json!({"mode":"custom","url":"socks5h://127.0.0.1:1080","noProxy":"localhost,127.0.0.1"});
+    assert_eq!(p.ok("set_proxy_settings", json!({"proxy":custom})), custom);
+    let before = p.ok("snapshot", json!({}));
+    let error = p.err(
+        "set_proxy_settings",
+        json!({"proxy":{"mode":"custom","url":"ftp://user:secret@localhost/path","noProxy":""}}),
+    );
+    assert!(!error.contains("secret"), "{error}");
+    assert_eq!(p.ok("proxy_settings", json!({})), custom);
+    assert_eq!(p.ok("snapshot", json!({})), before);
+    drop(p);
+    let mut p = Proc::start(home.path());
+    assert_eq!(p.ok("proxy_settings", json!({})), custom);
+    let direct = json!({"mode":"direct","url":"","noProxy":""});
+    assert_eq!(p.ok("set_proxy_settings", json!({"proxy":direct})), direct);
+    assert!(
+        p.err("set_proxy_settings", json!({"proxy":{"mode":"unknown"}}))
+            .contains("无效")
+    );
+    assert_eq!(p.ok("proxy_settings", json!({})), direct);
+    assert_eq!(
+        p.ok("set_proxy_settings", json!({"proxy":default})),
+        default
+    );
+    assert_eq!(p.ok("proxy_settings", json!({})), default);
+}
+
+#[test]
 fn snapshot_of_a_fresh_home_lists_every_known_agent_and_nothing_else() {
     let d = tempfile::tempdir().unwrap();
     let mut p = Proc::start(d.path());

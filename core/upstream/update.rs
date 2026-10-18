@@ -175,10 +175,10 @@ impl Remote for Net {
     }
 
     fn pull(&self, image: &str) -> Result<()> {
-        let out = Command::new("docker")
-            .args(["pull", "-q", image])
-            .output()
-            .context("couldn't run docker")?;
+        let mut command = Command::new("docker");
+        command.args(["pull", "-q", image]);
+        crate::proxy::configure_command(&mut command)?;
+        let out = command.output().context("couldn't run docker")?;
         if !out.status.success() {
             let err = String::from_utf8_lossy(&out.stderr);
             bail!("{}", err.trim());

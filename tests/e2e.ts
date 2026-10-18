@@ -583,6 +583,55 @@ try {
     assert.equal(installed.states.claude, "on");
   });
   await click("设置");
+  await check("下载代理默认跟随系统并可保存手动配置", async () => {
+    await browser("wait", 'select[aria-label="代理模式"]');
+    assert.equal(
+      (await request<{ mode: string }>("proxy_settings")).mode,
+      "system",
+    );
+    await browser("select", 'select[aria-label="代理模式"]', "custom");
+    await fill("代理地址", "http://127.0.0.1:7890");
+    await fill("绕过代理", "localhost,127.0.0.1,*.local");
+    await click("保存");
+    await until(
+      async () =>
+        (await request<{ mode: string }>("proxy_settings")).mode === "custom",
+      "save custom proxy",
+    );
+    const settings = JSON.parse(
+      await readFile(join(home, ".siu/proxy.json"), "utf8"),
+    );
+    assert.equal(settings.url, "http://127.0.0.1:7890");
+    assert.equal(settings.noProxy, "localhost,127.0.0.1,*.local");
+    await js(
+      'document.querySelector(".proxy-mode-select").closest("section").scrollIntoView({block:"center"})',
+    );
+    await browser("screenshot", join(artifacts, "07-proxy-settings.png"));
+  });
+  await check(
+    "重新进入设置保留代理地址，直连与系统模式可即时切换",
+    async () => {
+      await browser("press", "1");
+      await click("设置");
+      await browser("wait", 'input[id="proxy-url"]');
+      const value = await js('document.querySelector("#proxy-url").value');
+      assert.ok(value.includes("http://127.0.0.1:7890"), value);
+      await browser("select", 'select[aria-label="代理模式"]', "direct");
+      await click("保存");
+      await until(
+        async () =>
+          (await request<{ mode: string }>("proxy_settings")).mode === "direct",
+        "save direct mode",
+      );
+      await browser("select", 'select[aria-label="代理模式"]', "system");
+      await click("保存");
+      await until(
+        async () =>
+          (await request<{ mode: string }>("proxy_settings")).mode === "system",
+        "restore system proxy",
+      );
+    },
+  );
   await click("深色");
   await browser("press", "1");
   await browser("screenshot", join(artifacts, "05-mcp-dark.png"));

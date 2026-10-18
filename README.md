@@ -2,6 +2,8 @@
 
 [siu](https://github.com/nicholasxjy/siu) 的桌面界面，统一管理 coding agent 的 MCP 服务与 Skills。基于 [mygo](https://github.com/egoist/mygo)、React 和 siu 的 Rust 核心，使用系统 WebView。
 
+[下载安装包](https://github.com/nicholasxjy/siu-gui/releases/latest) · [更新记录](CHANGELOG.md)
+
 ## 功能
 
 - 以「资源 × Agent」矩阵分配 MCP 与 Skills，查看实际配置结果、兼容性和写入问题。
@@ -48,7 +50,9 @@ bun run build
 
 凭据的配置预览默认遮蔽，编辑表单可单独显示。资源库和 Agent 配置仍是包含实际凭据的本机文件，沿用对应工具的存储格式。
 
-网络遵循 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY`。应用更新通过发布包完成；MCP/Skills 的「更新」不会通过 Cargo 重装桌面应用。
+网络默认读取系统代理（macOS、Windows、Linux 桌面环境），同时遵循 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY`（含小写形式）。在「设置 → 网络」中可选择跟随系统、手动代理或不使用代理；手动模式支持 HTTP、HTTPS、SOCKS5、认证信息和绕过列表。设置保存在资源库的 `proxy.json`，后续请求立即生效，无需重启。GitHub Skills 扫描、安装和更新、Registry、skills.sh、npm/PyPI 查询共用此策略。Docker 镜像由 Docker 引擎下载，需要配置 Docker 自身的代理。
+
+应用更新通过发布包完成；MCP/Skills 的「更新」不会通过 Cargo 重装桌面应用。
 
 ## 测试
 

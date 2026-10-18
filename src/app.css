@@ -976,3 +976,52 @@ fieldset {
     animation-duration: 2s;
   }
 }
+
+/* ProxySettings form */
+.proxy-mode-select select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  min-width: 130px;
+}
+.proxy-hint-row {
+  align-items: flex-start;
+}
+.proxy-hint {
+  margin-top: 0;
+  line-height: 1.8;
+}
+.proxy-field-row {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 0;
+}
+.proxy-url-field,
+.proxy-no-proxy-field {
+  width: 100%;
+  max-width: 440px;
+}
+.proxy-url-field .proxy-hint,
+.proxy-no-proxy-field .proxy-hint {
+  margin-top: 6px;
+}
+.proxy-save-error {
+  font-size: 11px;
+  margin: 4px 0 0;
+  line-height: 1.7;
+}
+.proxy-save-row {
+  margin-top: 8px;
+}
+.proxy-load-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  font-size: 11px;
+}

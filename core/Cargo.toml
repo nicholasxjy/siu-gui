@@ -1,6 +1,6 @@
 [package]
 name = "siu-core"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 description = "The siu-gui core sidecar: an NDJSON service wrapping siu's upstream MCP/Skills library logic."
 license = "MIT"
@@ -14,6 +14,7 @@ path = "src/main.rs"
 anyhow = "1.0.104"
 dirs = "7.0.0"
 flate2 = "1.1.10"
+proxy-watch = { version = "0.3.1", features = ["pac-native"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
 sha2 = "0.11.0"

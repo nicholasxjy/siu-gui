@@ -43,6 +43,7 @@ mod env;
 mod guard;
 mod handlers;
 mod protocol;
+mod proxy;
 mod registry_cache;
 mod scan;
 mod server;

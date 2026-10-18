@@ -119,11 +119,55 @@ const metadata = JSON.parse(
     "core/Cargo.toml",
   ]),
 );
+// Cargo metadata includes Android/iOS packages even though Siu only ships
+// desktop builds. Collect the union of actual dependency graphs for our
+// six supported targets, so notices match the code we distribute.
+const desktopPackages = new Set<string>();
+for (const target of [
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "aarch64-pc-windows-msvc",
+  "x86_64-pc-windows-msvc",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-unknown-linux-gnu",
+]) {
+  const graph = JSON.parse(
+    command([
+      "cargo",
+      "metadata",
+      "--format-version",
+      "1",
+      "--locked",
+      "--manifest-path",
+      "core/Cargo.toml",
+      "--filter-platform",
+      target,
+    ]),
+  );
+  const dependencies = new Map<string, string[]>(
+    graph.resolve.nodes.map((node: { id: string; deps: { pkg: string }[] }) => [
+      node.id,
+      node.deps.map((dep) => dep.pkg),
+    ]),
+  );
+  const seen = new Set<string>();
+  const pending: string[] = [graph.resolve.root];
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    desktopPackages.add(id);
+    pending.push(...(dependencies.get(id) || []));
+  }
+}
 const winapi = metadata.packages.find(
   (p: { name: string }) => p.name === "winapi",
 );
 for (const p of metadata.packages
-  .filter((p: { source: string | null }) => p.source !== null)
+  .filter(
+    (p: { id: string; source: string | null }) =>
+      p.source !== null && desktopPackages.has(p.id),
+  )
   .sort((a: { name: string }, b: { name: string }) =>
     a.name.localeCompare(b.name),
   )) {

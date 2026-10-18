@@ -91,7 +91,9 @@ server's `update {kind:"mcp",name}` without reimplementing the npx/uvx/
 docker package-spec parsing, and without going through `update_mcp`'s
 "touch every server" loop, which would otherwise be the only way to reuse
 this logic and would make needless network calls for every _other_ server
-on a single-item update. No logic changed, only visibility. Addresses the
+on a single-item update. The Docker pull command now receives the current proxy
+policy through its environment; Docker's daemon still owns image downloads and
+requires its own proxy configuration. Addresses the
 gap: "`update::Net` is private; a minimal visibility change lets it be
 reused." The ignored network test now checks npm/PyPI package versions used by
 MCP updates. The upstream siu CLI's Cargo self-update probe is outside the desktop
@@ -102,7 +104,27 @@ Serde serialization/deserialization so registry descriptors can be cached on dis
 and remain installable after an application restart. Registry parsing and featured
 server definitions retain upstream behavior.
 
-**`cache.rs`, `net.rs`** — vendored verbatim, no changes.
+**`net.rs`** — HTTP requests keep upstream's 60-second transport timeout and
+add an independent deadline around the entire fetch, including reading the
+response body. A stalled GitHub archive download therefore returns a useful
+timeout error and releases the update's write lock even if the transport stops
+honoring its timeout. The worker only fetches bytes; a response arriving after
+the deadline is discarded and cannot mutate the library. At most eight HTTP
+workers may remain active, so repeated retries cannot create unbounded threads
+when a transport stays blocked. Local HTTP tests cover stalled headers, a stalled
+partial body, successful reads, response-size limits and worker capacity.
+
+The previous process-wide, environment-only agent is replaced with a bounded
+cache of agents keyed by the resolved proxy (including an explicit direct route).
+Each fetch loads `core/src/proxy.rs` policy and resolves native system/environment
+or manual proxy rules for its target. Redirects are followed explicitly so their
+new target is checked against proxy and bypass rules too. Proxy/PAC discovery is
+inside the independent deadline. Local proxy servers verify HTTP CONNECT,
+percent-encoded authentication without credential forwarding to the origin,
+SOCKS5 remote DNS, live switching after settings saves, redirect bypass and
+explicit direct routing.
+
+**`cache.rs`** — vendored verbatim, no changes.
 
 ## Gaps closed outside the vendored files (in `core/src/`)
 

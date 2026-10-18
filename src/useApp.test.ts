@@ -42,6 +42,74 @@ describe("写入与快照的一致性", () => {
     expect(result.current.toast).toBe("");
     expect(result.current.busy).toBe("");
   });
+  it("更新超时后即使状态刷新未返回，也结束 loading 并允许重试", async () => {
+    let reads = 0,
+      finishRecovery: (value: Snapshot) => void = () => {};
+    const updated = fixture();
+    updated.skills[0].description = "更新后的 Skill";
+    vi.mocked(api.request).mockImplementation(
+      <T>(method: string): Promise<T> => {
+        if (method !== "snapshot")
+          return Promise.reject(new Error("GitHub 下载超时"));
+        if (++reads === 1) return Promise.resolve(fixture() as T);
+        return new Promise<Snapshot>((resolve) => {
+          finishRecovery = resolve;
+        }) as Promise<T>;
+      },
+    );
+    const { result } = renderHook(() => useApplication());
+    await waitFor(() => expect(result.current.snapshot).not.toBeNull());
+    await act(async () => {
+      await expect(
+        result.current.mutate(
+          "update",
+          { kind: "skills", name: updated.skills[0].name },
+          "更新 Skill",
+        ),
+      ).rejects.toThrow("GitHub 下载超时");
+    });
+    expect(api.request).toHaveBeenCalledTimes(3);
+    expect(result.current.busy).toBe("");
+    expect(result.current.alert).toEqual(["GitHub 下载超时"]);
+    expect(result.current.toast).toBe("");
+
+    vi.mocked(api.request).mockResolvedValueOnce(mutationResult(updated));
+    await act(async () => {
+      await result.current.mutate("update", { kind: "skills" }, "更新 Skill");
+    });
+    await act(async () => {
+      finishRecovery(fixture());
+    });
+    expect(result.current.snapshot?.skills[0].description).toBe(
+      "更新后的 Skill",
+    );
+    expect(result.current.busy).toBe("");
+    expect(result.current.alert).toEqual([]);
+    expect(result.current.toast).toBe("更新 Skill完成");
+  });
+  it("更新失败后的状态刷新也失败时，保留原始更新错误", async () => {
+    let reads = 0;
+    vi.mocked(api.request).mockImplementation(
+      async <T>(method: string): Promise<T> => {
+        if (method !== "snapshot") throw new Error("GitHub 下载超时");
+        if (++reads === 1) return fixture() as T;
+        throw new Error("读取实际配置失败");
+      },
+    );
+    const { result } = renderHook(() => useApplication());
+    await waitFor(() => expect(result.current.snapshot).not.toBeNull());
+    await act(async () => {
+      await expect(
+        result.current.mutate("update", { kind: "skills" }, "更新 Skills"),
+      ).rejects.toThrow("GitHub 下载超时");
+    });
+    expect(result.current.busy).toBe("");
+    expect(result.current.alert).toEqual([
+      "GitHub 下载超时",
+      "读取实际配置失败",
+    ]);
+    expect(result.current.toast).toBe("");
+  });
   it("写入进行中拒绝第二次写入，避免快速点击互相覆盖", async () => {
     let finish: (value: MutationResult) => void = () => {};
     vi.mocked(api.request).mockImplementation(

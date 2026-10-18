@@ -115,6 +115,12 @@ export interface AppInfo {
   arch: string;
   version: string;
 }
+export type ProxyMode = "system" | "custom" | "direct";
+export interface ProxySettings {
+  mode: ProxyMode;
+  url: string;
+  noProxy: string;
+}
 export type Mutate = (
   method: string,
   params: Record<string, unknown>,

@@ -24,7 +24,7 @@ bun run build
 
 | 平台          | 默认输出目录           | 主要产物                                |
 | ------------- | ---------------------- | --------------------------------------- |
-| macOS ARM64   | `build/darwin-arm64/`  | `Siu.app`、`Siu 0.0.1 arm64.dmg`        |
+| macOS ARM64   | `build/darwin-arm64/`  | `Siu.app`、`Siu 0.0.2 arm64.dmg`        |
 | macOS Intel   | `build/darwin-amd64/`  | `.app`、`.dmg`                          |
 | Windows x64   | `build/windows-amd64/` | 可执行目录、NSIS 安装器                 |
 | Windows ARM64 | `build/windows-arm64/` | 可执行目录、NSIS 安装器                 |
@@ -81,7 +81,7 @@ mygo 打包时将当前平台资源平铺到应用的资源目录。Go 优先使
 
 推送 `v*` 标签时，工作流在所有构建成功后创建 **draft release**，并附上 DMG、Windows 安装器和 Linux 包。工作流本身不会发布草稿，也不会自动上传本机产物。
 
-`scripts/release.ts` 从目标构建目录选择当前版本的安装包，输出带平台与架构的唯一名称，例如 `siu-gui_0.0.1_macos_arm64.dmg`、`siu-gui_0.0.1_windows_x64_setup.exe`。缺少包或出现重复候选会阻止发布。CI 会为全部资产生成 `SHA256SUMS.txt`。确认草稿内容后可正式发布；本机生成的 macOS 通用包可以按同样命名规则追加到该版本。
+`scripts/release.ts` 从目标构建目录选择当前版本的安装包，输出带平台与架构的唯一名称，例如 `siu-gui_0.0.2_macos_arm64.dmg`、`siu-gui_0.0.2_windows_x64_setup.exe`。缺少包或出现重复候选会阻止发布。CI 会为全部资产生成 `SHA256SUMS.txt`。确认草稿内容后可正式发布；本机生成的 macOS 通用包可以按同样命名规则追加到该版本。
 
 ## 验证与许可证
 

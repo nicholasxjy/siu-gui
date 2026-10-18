@@ -35,7 +35,7 @@ export function useApplication() {
       }
     } catch (e) {
       if (mounted.current && id === generation.current)
-        setAlert([errorMessage(e)]);
+        setAlert((previous) => [...(force ? previous : []), errorMessage(e)]);
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -102,7 +102,9 @@ export function useApplication() {
       } catch (e) {
         if (mounted.current) {
           setAlert([errorMessage(e)]);
-          await refresh(true);
+          // Report the failed operation immediately; an unresponsive
+          // recovery read must not keep the update dialog spinning.
+          void refresh(true);
         }
         throw e;
       } finally {
