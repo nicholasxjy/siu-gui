@@ -867,7 +867,11 @@ mod tests {
         assert_eq!(w.inputs.len(), 2);
         let filled = w.fill(&["k".into(), "~/x".into()], std::path::Path::new("/h"));
         assert_eq!(filled.env["API_KEY"], "k");
-        assert_eq!(filled.args, ["-y", "@acme/weather", "/h/x"]);
+        let expanded = std::path::Path::new("/h")
+            .join("x")
+            .to_string_lossy()
+            .into_owned();
+        assert_eq!(filled.args, ["-y", "@acme/weather", expanded.as_str()]);
     }
 
     #[test]

@@ -16,7 +16,8 @@
 // platform it packages before invoking `mygo build`. Every process here
 // is spawned with an argv array -- no shell is ever used.
 
-import { access, chmod, copyFile, mkdir } from "node:fs/promises";
+import { access, chmod, copyFile, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -119,8 +120,44 @@ export async function exists(path: string): Promise<boolean> {
   }
 }
 
+async function verifyCoreStartup(path: string): Promise<void> {
+  const home = await mkdtemp(join(tmpdir(), "siu-core-release-"));
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const process = Bun.spawn([path], {
+      env: { ...globalThis.process.env, SIU_GUI_TEST_HOME: home },
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    timeout = setTimeout(() => process.kill("SIGKILL"), 15_000);
+    process.stdin.write(
+      JSON.stringify({ id: 1, method: "snapshot", params: {} }) + "\n",
+    );
+    process.stdin.end();
+    const [code, stdout, stderr] = await Promise.all([
+      process.exited,
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+    ]);
+    if (code !== 0)
+      throw new Error(`release siu-core exited ${code}: ${stderr}`);
+    const response = JSON.parse(stdout.trim());
+    const version = (await Bun.file(join(REPO_ROOT, "package.json")).json())
+      .version;
+    if (response.id !== 1 || !response.ok || response.data?.version !== version)
+      throw new Error(
+        "release siu-core returned an invalid snapshot or version",
+      );
+    console.log(`[core] release startup and snapshot verified (${version})`);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    await rm(home, { recursive: true, force: true });
+  }
+}
+
 export interface BuildCoreOptions {
-  /** "musl" (default for linux) or "gnu"; ignored for darwin/windows. */
+  /** "gnu" (default for linux) or "musl" for custom toolchains; ignored for darwin/windows. */
   linuxLibc?: "musl" | "gnu";
   /** Also stage internal/backend/bundle/siu-core.bin. Defaults to true
    *  only when target is the machine's own platform. */
@@ -135,7 +172,7 @@ export async function buildCore(
 ): Promise<string> {
   const libc: "musl" | "gnu" =
     options.linuxLibc ??
-    (process.env.CORE_LINUX_LIBC === "gnu" ? "gnu" : "musl");
+    (process.env.CORE_LINUX_LIBC === "musl" ? "musl" : "gnu");
   const triple = rustTriple(target, libc);
   const isHost = target.goos === HOST.goos && target.goarch === HOST.goarch;
   const stageEmbedded = options.stageEmbedded ?? isHost;
@@ -190,6 +227,8 @@ export async function buildCore(
   if (!(await exists(builtPath))) {
     throw new Error(`cargo build reported success but ${builtPath} is missing`);
   }
+
+  if (isHost) await verifyCoreStartup(builtPath);
 
   const destPath = resourceBinPath(target);
   await mkdir(join(destPath, ".."), { recursive: true });

@@ -37,11 +37,11 @@ jobs:
           - runner: ubuntu-22.04
             platform: linux/amd64
             artifact: linux-amd64
-            rust: x86_64-unknown-linux-musl
+            rust: x86_64-unknown-linux-gnu
           - runner: ubuntu-24.04-arm
             platform: linux/arm64
             artifact: linux-arm64
-            rust: aarch64-unknown-linux-musl
+            rust: aarch64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,15 +59,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: core
-      - name: Linux runtime and musl tools
+      - name: Linux runtime
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools libgtk-3-0 libwebkit2gtk-4.1-0
-          echo 'CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc' >> "$GITHUB_ENV"
-          echo 'CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc' >> "$GITHUB_ENV"
-          echo 'CC_x86_64_unknown_linux_musl=musl-gcc' >> "$GITHUB_ENV"
-          echo 'CC_aarch64_unknown_linux_musl=musl-gcc' >> "$GITHUB_ENV"
+          sudo apt-get install -y libgtk-3-0 libwebkit2gtk-4.1-0 fonts-noto-cjk
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test

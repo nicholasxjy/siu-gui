@@ -289,13 +289,12 @@ pub fn link(target: &Path, link: &Path) -> Result<()> {
 pub fn unlink(p: &Path) -> Result<()> {
     #[cfg(windows)]
     {
-        if junction::exists(p).unwrap_or(false) {
-            return junction::delete(p).with_context(|| format!("{}", p.display()));
-        }
-        if fs::symlink_metadata(p)
-            .map(|m| m.file_type().is_dir())
-            .unwrap_or(false)
-        {
+        use std::os::windows::fs::FileTypeExt;
+        let kind = fs::symlink_metadata(p)?.file_type();
+        // RemoveDirectoryW removes the junction itself, including when its
+        // target is missing. Deleting only the reparse point leaves an empty
+        // directory behind and prevents a later assignment from recreating it.
+        if kind.is_dir() || kind.is_symlink_dir() {
             return fs::remove_dir(p).with_context(|| format!("{}", p.display()));
         }
     }
@@ -393,6 +392,19 @@ mod tests {
         unlink(&link_path).unwrap();
         assert!(target.join("SKILL.md").is_file());
         assert!(fs::symlink_metadata(link_path).is_err());
+    }
+
+    #[test]
+    fn unlink_removes_a_link_when_its_target_is_missing() {
+        let d = tempfile::tempdir().unwrap();
+        let target = d.path().join("source");
+        let installed = d.path().join("agent/skills/missing");
+        fs::create_dir_all(&target).unwrap();
+        link(&target, &installed).unwrap();
+        fs::remove_dir(&target).unwrap();
+        assert!(fs::symlink_metadata(&installed).is_ok());
+        unlink(&installed).unwrap();
+        assert!(fs::symlink_metadata(&installed).is_err());
     }
 
     #[test]

@@ -54,15 +54,11 @@ bun run build --platform darwin/universal
 
 这会编译两种 Rust 核心，并合并嵌入的备用核心。mygo 自动将两个平台资源目录中的 sidecar 合并为通用二进制，同时合并 Go 主程序。该流程需要 macOS 的 SDK 与 `lipo`。
 
-Linux 的 Rust 核心默认使用 musl，减少对目标系统 glibc 版本的限制。原生 Linux runner 需要 `musl-tools`，ARM64 需将 `CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER` 设置为 `musl-gcc`，相应的 `CC_aarch64_unknown_linux_musl` 也使用 `musl-gcc`。x64 对应 `X86_64` / `x86_64`。
+Linux 的 Rust 核心默认使用 GNU/glibc，与桌面 GTK/WebKitGTK 环境一致。发行构建使用原生 Linux runner：x64 为 Ubuntu 22.04，ARM64 为 Ubuntu 24.04。
 
-本地可以显式选择 GNU 工具链：
+构建脚本会在本机目标编译完成后，用隔离目录执行发行核心并读取真实 `snapshot`；启动失败或版本不一致会阻止打包。x86_64 musl 在首轮 CI 中出现启动崩溃，因此发行版使用 GNU。`CORE_LINUX_LIBC=musl` 仅供自备工具链的定制构建，并须通过同样的启动检查。
 
-```sh
-CORE_LINUX_LIBC=gnu bun run build --platform linux/amd64
-```
-
-GNU 产物受构建机 glibc 版本限制。macOS/Windows 的 shell 环境变量语法不同；PowerShell 可通过 `$env:CORE_LINUX_LIBC = 'gnu'` 设置同一变量。
+GNU 产物受构建机 glibc 版本限制。Linux 图形运行环境需要 GTK 3、WebKitGTK 4.1；中文字体可安装 `fonts-noto-cjk`。
 
 ## 核心的放置与生命周期
 

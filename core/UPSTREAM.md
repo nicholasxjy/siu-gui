@@ -55,9 +55,11 @@ Unlike upstream's previous
 `#[cfg(not(unix))]` copy fallback — it stays a real link: a later skill
 update or removal through siu's library actually affects what the agent
 sees, instead of silently going stale. A new `unlink` helper removes a
-siu-made link safely on both platforms: Windows junctions use `junction::delete`,
-with `remove_dir` for other directory reparse points. Both preserve the link's
-target; `fs::remove_file` rejects these directory links. Addresses the gap: "skills.rs's
+siu-made link safely on both platforms: Windows junctions use `fs::remove_dir`,
+which removes the junction's directory entry without deleting the target.
+`junction::delete` only detaches the reparse point and leaves an empty directory,
+so it is not used for unlinking. Windows file-type metadata also identifies
+broken directory links. `fs::remove_file` rejects these directory links. Addresses the gap: "skills.rs's
 `#[cfg(not(unix))]` copy_dir doesn't survive a Windows update/removal;
 needs a Windows junction (no administrator) and a safe unlink."
 

@@ -11,7 +11,7 @@
 | `bun run typecheck`                                                                            | 通过                            | 界面、脚本、工具与测试的 TypeScript 检查                                                |
 | `bun run test`                                                                                 | 13 项通过                       | 配置参数与凭据保留、脱敏、兼容性、并发写入、过期读取、错误后的实际快照、扫描 token 回收 |
 | `bun run test:build`                                                                           | 25 项通过                       | 六个目标、通用 macOS 目标、构建参数校验与转发                                           |
-| `cargo test --locked --manifest-path core/Cargo.toml`                                          | 77 项通过；1 项联网探针默认忽略 | 65 项单元测试与 12 项真实 NDJSON 协议测试                                               |
+| `cargo test --locked --manifest-path core/Cargo.toml`                                          | 78 项通过；1 项联网探针默认忽略 | 66 项单元测试与 12 项真实 NDJSON 协议测试                                               |
 | `cargo clippy --manifest-path core/Cargo.toml --all-targets -- -D warnings`                    | 通过                            | Rust 静态检查                                                                           |
 | `go test -race ./...`                                                                          | 42 项通过；1 项条件跳过         | IPC 多路响应、取消、进程关闭竞争、崩溃恢复、进程回收、原生辅助方法与隔离测试服务        |
 | `bun run test:e2e`                                                                             | 24 项通过                       | 正式界面 + 真实 Go/Rust 后端 + 实际配置文件与目录链接                                   |
@@ -94,7 +94,7 @@ build/darwin-universal/Siu 0.0.1.dmg
 | macOS ARM64         | Rust/Go 编译、单元/协议/浏览器测试、应用和 DMG、原生 smoke | 已配置                                               |
 | macOS Intel         | Rust/Go 编译、合入通用包、架构与签名检查                   | 运行与平台测试                                       |
 | Windows x64 / ARM64 | Go 桌面代码交叉编译                                        | Rust 核心、junction 生命周期、WebView2、安装器与运行 |
-| Linux x64 / ARM64   | Go 桌面代码交叉编译                                        | Rust musl 核心、GTK/WebKitGTK、软件包与运行          |
+| Linux x64 / ARM64   | Go 桌面代码交叉编译                                        | Rust GNU 核心、GTK/WebKitGTK、软件包与运行           |
 
 [build.yml](../.github/workflows/build.yml) 为六个目标配置了原生 runner。Linux x64 还执行浏览器端到端流程。本记录只汇总本机阶段的检查。[发布 CI](https://github.com/nicholasxjy/siu-gui/actions/workflows/build.yml) 会在对应原生 runner 上生成其他系统的安装包并运行测试，执行结果以该次发布工作流为准。
 
