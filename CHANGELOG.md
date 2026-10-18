@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.3
+
+- Redesign the application icon around an S-shaped route connecting a resource module to an Agent, with an iris-blue tile, mint accent and transparent corners.
+- Use the same SVG design for the desktop icon, in-app brand and browser favicon; package native macOS, Windows and Linux icon sizes from the 1024px PNG.
+- Generate the PNG directly from the SVG with `bun run generate:icon`, keeping future icon changes consistent across all surfaces.
+
 ## 0.0.2
 
 - Follow native system proxies by default, including proxy environment variables and native PAC/WPAD resolution on macOS and Windows.

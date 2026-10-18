@@ -1,6 +1,6 @@
 {
   "name": "siu-gui",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,7 +18,8 @@
     "format": "prettier --write src tests scripts/*.ts tools/*.ts index.html vite.config.ts mygo.config.ts tsconfig.json package.json",
     "test:core": "cargo test --manifest-path core/Cargo.toml",
     "test:go": "go test ./...",
-    "generate": "mygo generate"
+    "generate": "mygo generate",
+    "generate:icon": "go run scripts/gen-icon.go"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",

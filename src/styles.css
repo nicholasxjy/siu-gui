@@ -206,14 +206,11 @@ input {
   place-items: center;
   width: 33px;
   height: 33px;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 10px;
 }
-.brand-symbol svg {
-  width: 24px;
-  height: 24px;
-  stroke-width: 2.5;
+.brand-symbol img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .wordmark {
   font-size: 28px;

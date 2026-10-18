@@ -38,6 +38,7 @@ import {
   FileCode2,
 } from "lucide-react";
 import type { Agent, Kind } from "./types";
+import brandIcon from "../resources/icon.svg?url";
 const icons = {
   plug: Plug2,
   skill: Sparkles,
@@ -98,9 +99,7 @@ export function Icon({
 export function Brand() {
   return (
     <span className="brand-symbol" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <path d="M5 7h8a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h10M5 3v4m14 12v3" />
-      </svg>
+      <img src={brandIcon} alt="" width={33} height={33} draggable={false} />
     </span>
   );
 }

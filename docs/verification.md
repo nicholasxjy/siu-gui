@@ -4,6 +4,14 @@
 
 所有真实 Agent 配置、资源库和 Skills 链接操作均使用临时绝对路径。进程、浏览器与原生应用检查显式设置 `SIU_GUI_TEST_HOME`；Rust 单元测试使用等价的 `Env::rooted(tempdir)`。测试未修改日常 Agent 配置。
 
+## v0.0.3 图标验证
+
+- `bun run generate:icon` 从统一 SVG 生成 1024×1024 PNG，四角透明，重复生成的 SHA-256 相同。
+- `bun run build:web` 和 23 项前端测试通过，界面标志及 favicon 均引用同一 SVG。
+- 本机完成 macOS ARM64、Windows x64 和 Linux x64 的图标打包检查；Windows/Linux 为交叉构建，不代表已执行原生界面测试。
+- macOS ICNS 可由系统 `iconutil` 解码，包含最高 1024px 的图像。Windows 可执行文件实际嵌入 16/24/32/48/64/128/256px 七档图标；Linux 桌面 PNG 与母版校验和一致。
+- 已查看深浅背景下的 16–128px 原生图标预览。发行安装包和各平台测试结果以 [v0.0.3 发布工作流](https://github.com/nicholasxjy/siu-gui/actions/workflows/build.yml) 为准。
+
 ## v0.0.2 代理设置与加载恢复验证
 
 | 检查 | 结果 |

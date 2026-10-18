@@ -24,7 +24,7 @@ bun run build
 
 | 平台          | 默认输出目录           | 主要产物                                |
 | ------------- | ---------------------- | --------------------------------------- |
-| macOS ARM64   | `build/darwin-arm64/`  | `Siu.app`、`Siu 0.0.2 arm64.dmg`        |
+| macOS ARM64   | `build/darwin-arm64/`  | `Siu.app`、`Siu 0.0.3 arm64.dmg`        |
 | macOS Intel   | `build/darwin-amd64/`  | `.app`、`.dmg`                          |
 | Windows x64   | `build/windows-amd64/` | 可执行目录、NSIS 安装器                 |
 | Windows ARM64 | `build/windows-arm64/` | 可执行目录、NSIS 安装器                 |
@@ -32,6 +32,18 @@ bun run build
 | Linux ARM64   | `build/linux-arm64/`   | 可执行目录、`.deb`、`.tar.gz`、安装脚本 |
 
 Windows 的应用可执行文件需要同目录的资源；分发时使用安装器或完整目录。Linux 归档里的安装脚本不会代替系统安装 WebKitGTK。
+
+## 应用图标
+
+`resources/icon.svg` 是桌面图标、界面标志和 favicon 的唯一设计源文件。图形以 S 形通路连接资源模块和 Agent，使用蓝紫底色、浅色主形与薄荷色模块。1024px 画布保留透明边缘和圆角底板，适应不同桌面背景。
+
+修改 SVG 后，安装 librsvg（macOS：`brew install librsvg`；Debian/Ubuntu：`sudo apt install librsvg2-bin`），再生成并提交 PNG：
+
+```sh
+bun run generate:icon
+```
+
+`mygo.config.ts` 将 `resources/icon.png` 交给 mygo。打包时自动生成 macOS 的多尺寸 ICNS（最高 1024px）、Windows 的 16/24/32/48/64/128/256px 图标及 Linux 桌面图标。普通开发和 CI 打包直接使用已提交的 PNG，无需安装 librsvg。
 
 ## 平台目标
 
@@ -81,7 +93,7 @@ mygo 打包时将当前平台资源平铺到应用的资源目录。Go 优先使
 
 推送 `v*` 标签时，工作流在所有构建成功后创建 **draft release**，并附上 DMG、Windows 安装器和 Linux 包。工作流本身不会发布草稿，也不会自动上传本机产物。
 
-`scripts/release.ts` 从目标构建目录选择当前版本的安装包，输出带平台与架构的唯一名称，例如 `siu-gui_0.0.2_macos_arm64.dmg`、`siu-gui_0.0.2_windows_x64_setup.exe`。缺少包或出现重复候选会阻止发布。CI 会为全部资产生成 `SHA256SUMS.txt`。确认草稿内容后可正式发布；本机生成的 macOS 通用包可以按同样命名规则追加到该版本。
+`scripts/release.ts` 从目标构建目录选择当前版本的安装包，输出带平台与架构的唯一名称，例如 `siu-gui_0.0.3_macos_arm64.dmg`、`siu-gui_0.0.3_windows_x64_setup.exe`。缺少包或出现重复候选会阻止发布。CI 会为全部资产生成 `SHA256SUMS.txt`。确认草稿内容后可正式发布；本机生成的 macOS 通用包可以按同样命名规则追加到该版本。
 
 ## 验证与许可证
 
