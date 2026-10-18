@@ -1,0 +1,122 @@
+name: Build desktop apps
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            platform: darwin/arm64
+            artifact: darwin-arm64
+            rust: aarch64-apple-darwin
+          - runner: macos-15-intel
+            platform: darwin/amd64
+            artifact: darwin-amd64
+            rust: x86_64-apple-darwin
+          - runner: windows-latest
+            platform: windows/amd64
+            artifact: windows-amd64
+            rust: x86_64-pc-windows-msvc
+          - runner: windows-11-arm
+            platform: windows/arm64
+            artifact: windows-arm64
+            rust: aarch64-pc-windows-msvc
+          - runner: ubuntu-22.04
+            platform: linux/amd64
+            artifact: linux-amd64
+            rust: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            artifact: linux-arm64
+            rust: aarch64-unknown-linux-musl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Linux runtime and musl tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools libgtk-3-0 libwebkit2gtk-4.1-0
+          echo 'CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc' >> "$GITHUB_ENV"
+          echo 'CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc' >> "$GITHUB_ENV"
+          echo 'CC_x86_64_unknown_linux_musl=musl-gcc' >> "$GITHUB_ENV"
+          echo 'CC_aarch64_unknown_linux_musl=musl-gcc' >> "$GITHUB_ENV"
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run test:build
+      - run: cargo test --locked --manifest-path core/Cargo.toml
+      - name: Go tests with race detector
+        if: matrix.platform != 'windows/arm64'
+        run: go test -race ./...
+      - name: Go tests on Windows ARM64
+        if: matrix.platform == 'windows/arm64'
+        run: go test ./...
+      - run: bun run build --platform ${{ matrix.platform }}
+      - run: bun scripts/release.ts --platform ${{ matrix.platform }}
+      - name: Real backend browser checks
+        if: matrix.platform == 'linux/amd64'
+        run: |
+          bunx agent-browser install --with-deps
+          bun run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: siu-${{ matrix.artifact }}
+          path: |
+            build/**
+            release-assets/**
+            .artifacts/e2e/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: siu-*
+          path: artifacts
+      - name: Collect packages and checksums
+        run: |
+          mkdir release-assets
+          find artifacts -path '*/release-assets/*' -type f -exec cp {} release-assets/ \;
+          (cd release-assets && sha256sum *) > SHA256SUMS.txt
+          mv SHA256SUMS.txt release-assets/
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: release-assets/*

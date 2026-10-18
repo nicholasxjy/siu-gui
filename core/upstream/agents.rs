@@ -1,0 +1,276 @@
+//! The agents siu knows: where each keeps its MCP servers and its skills.
+//!
+//! Vendored from upstream siu (see UPSTREAM.md). Deviation from upstream:
+//! `Env::rooted` is no longer `#[cfg(test)]`-gated so siu-gui's
+//! `SIU_GUI_TEST_HOME` isolation can build a fully rooted `Env` at runtime,
+//! not only in `cargo test`. No other behaviour changed.
+
+use std::path::PathBuf;
+
+/// How an agent's MCP config file spells a server.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum McpFormat {
+    /// `mcpServers` with `type` stdio/http/sse (Claude Code, Droid).
+    Claude,
+    /// `mcpServers` with a bare command or url, stdio only for Claude Desktop.
+    Cursor,
+    Desktop,
+    /// `[mcp_servers.<name>]` tables in TOML (Codex).
+    Codex,
+    /// `mcpServers` with `httpUrl` for streamable HTTP (Gemini CLI).
+    Gemini,
+    /// `mcp` with `type` local/remote and the command as one list (OpenCode).
+    OpenCode,
+    /// `mcpServers` with `type` local/http/sse and `tools` (Copilot CLI).
+    Copilot,
+    /// `mcpServers` with a bare command or a streamable HTTP url (Pi).
+    Pi,
+    /// `[mcp_servers.<name>]` tables with `type = "sse"` for SSE (Grok).
+    Grok,
+    /// `mcpServers` with `serverUrl` for a remote server (Antigravity).
+    Antigravity,
+}
+
+#[derive(Debug, Clone)]
+pub struct McpFile {
+    pub path: PathBuf,
+    pub format: McpFormat,
+}
+
+#[derive(Debug, Clone)]
+pub struct Agent {
+    pub id: &'static str,
+    pub name: &'static str,
+    /// The folder whose presence says the agent is installed.
+    pub home: PathBuf,
+    pub mcp: Option<McpFile>,
+    pub skills: Option<PathBuf>,
+}
+
+impl Agent {
+    pub fn detected(&self) -> bool {
+        self.home.is_dir()
+    }
+}
+
+/// Where things live on this machine: the user's home, the platform config
+/// folder (Claude Desktop's parent) and the overrides agents honour.
+#[derive(Debug, Clone)]
+pub struct Env {
+    pub home: PathBuf,
+    pub config: PathBuf,
+    pub claude_dir: Option<PathBuf>,
+    pub codex_home: Option<PathBuf>,
+    pub pi_dir: Option<PathBuf>,
+    pub grok_home: Option<PathBuf>,
+}
+
+impl Env {
+    pub fn from_system() -> Self {
+        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        let config = dirs::config_dir().unwrap_or_else(|| home.join(".config"));
+        let var = |k: &str| {
+            std::env::var_os(k)
+                .filter(|v| !v.is_empty())
+                .map(PathBuf::from)
+        };
+        Env {
+            claude_dir: var("CLAUDE_CONFIG_DIR"),
+            codex_home: var("CODEX_HOME"),
+            pi_dir: var("PI_CODING_AGENT_DIR").map(|d| match d.strip_prefix("~") {
+                Ok(rest) => home.join(rest),
+                Err(_) => d,
+            }),
+            grok_home: var("GROK_HOME"),
+            home,
+            config,
+        }
+    }
+
+    /// An environment rooted entirely in `home`, for tests and for
+    /// siu-gui's `SIU_GUI_TEST_HOME` isolation.
+    pub fn rooted(home: &std::path::Path) -> Self {
+        Env {
+            home: home.to_path_buf(),
+            config: home.join(".config"),
+            claude_dir: None,
+            codex_home: None,
+            pi_dir: None,
+            grok_home: None,
+        }
+    }
+}
+
+/// Every agent siu can manage.
+pub fn all(env: &Env) -> Vec<Agent> {
+    let home = &env.home;
+    let config = &env.config;
+    let h = |p: &str| home.join(p);
+    let claude_dir = env.claude_dir.clone().unwrap_or_else(|| h(".claude"));
+    let codex_dir = env.codex_home.clone().unwrap_or_else(|| h(".codex"));
+    // Claude Code keeps its user servers in .claude.json beside its folder,
+    // or inside it when CLAUDE_CONFIG_DIR moves it.
+    let claude_json = match &env.claude_dir {
+        Some(d) => d.join(".claude.json"),
+        None => h(".claude.json"),
+    };
+    let opencode_dir = h(".config/opencode");
+    let opencode_file = if opencode_dir.join("opencode.jsonc").is_file()
+        && !opencode_dir.join("opencode.json").is_file()
+    {
+        opencode_dir.join("opencode.jsonc")
+    } else {
+        opencode_dir.join("opencode.json")
+    };
+    let pi_dir = env.pi_dir.clone().unwrap_or_else(|| h(".pi/agent"));
+    let grok_dir = env.grok_home.clone().unwrap_or_else(|| h(".grok"));
+    // Antigravity, the CLI (agy) and the app alike, reads its user-wide MCP
+    // servers and skills from ~/.gemini/config; either one's own folder says
+    // it is here
+    let agy_dir = h(".gemini/config");
+    let agy_home = [".gemini/antigravity-cli", ".gemini/antigravity"]
+        .map(h)
+        .into_iter()
+        .find(|d| d.is_dir())
+        .unwrap_or_else(|| agy_dir.clone());
+    let desktop_dir = config.join("Claude");
+    let mcp = |path: PathBuf, format| Some(McpFile { path, format });
+    vec![
+        Agent {
+            id: "claude",
+            name: "Claude Code",
+            home: claude_dir.clone(),
+            mcp: mcp(claude_json, McpFormat::Claude),
+            skills: Some(claude_dir.join("skills")),
+        },
+        Agent {
+            id: "codex",
+            name: "Codex",
+            home: codex_dir.clone(),
+            mcp: mcp(codex_dir.join("config.toml"), McpFormat::Codex),
+            skills: Some(codex_dir.join("skills")),
+        },
+        Agent {
+            id: "gemini",
+            name: "Gemini CLI",
+            home: h(".gemini"),
+            mcp: mcp(h(".gemini/settings.json"), McpFormat::Gemini),
+            skills: Some(h(".gemini/skills")),
+        },
+        Agent {
+            id: "opencode",
+            name: "OpenCode",
+            home: opencode_dir.clone(),
+            mcp: mcp(opencode_file, McpFormat::OpenCode),
+            skills: Some(opencode_dir.join("skills")),
+        },
+        Agent {
+            id: "cursor",
+            name: "Cursor",
+            home: h(".cursor"),
+            mcp: mcp(h(".cursor/mcp.json"), McpFormat::Cursor),
+            skills: Some(h(".cursor/skills")),
+        },
+        Agent {
+            id: "copilot",
+            name: "Copilot CLI",
+            home: h(".copilot"),
+            mcp: mcp(h(".copilot/mcp-config.json"), McpFormat::Copilot),
+            skills: Some(h(".copilot/skills")),
+        },
+        Agent {
+            id: "droid",
+            name: "Droid",
+            home: h(".factory"),
+            mcp: mcp(h(".factory/mcp.json"), McpFormat::Claude),
+            skills: Some(h(".factory/skills")),
+        },
+        Agent {
+            id: "pi",
+            name: "Pi",
+            home: pi_dir.clone(),
+            mcp: mcp(pi_dir.join("mcp.json"), McpFormat::Pi),
+            skills: Some(pi_dir.join("skills")),
+        },
+        Agent {
+            id: "grok",
+            name: "Grok",
+            home: grok_dir.clone(),
+            mcp: mcp(grok_dir.join("config.toml"), McpFormat::Grok),
+            skills: Some(grok_dir.join("skills")),
+        },
+        Agent {
+            id: "antigravity",
+            name: "Antigravity",
+            home: agy_home,
+            mcp: mcp(agy_dir.join("mcp_config.json"), McpFormat::Antigravity),
+            skills: Some(agy_dir.join("skills")),
+        },
+        Agent {
+            id: "claude-desktop",
+            name: "Claude Desktop",
+            home: desktop_dir.clone(),
+            mcp: mcp(
+                desktop_dir.join("claude_desktop_config.json"),
+                McpFormat::Desktop,
+            ),
+            skills: None,
+        },
+        Agent {
+            id: "agents",
+            name: "~/.agents (shared)",
+            home: h(".agents"),
+            mcp: None,
+            skills: Some(h(".agents/skills")),
+        },
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn find<'a>(agents: &'a [Agent], id: &str) -> &'a Agent {
+        agents.iter().find(|a| a.id == id).unwrap()
+    }
+
+    #[test]
+    fn antigravity_is_found_by_either_app_and_keeps_its_files_in_config() {
+        let d = tempfile::tempdir().unwrap();
+        let env = Env::rooted(d.path());
+        assert!(!find(&all(&env), "antigravity").detected());
+        fs::create_dir_all(d.path().join(".gemini/antigravity")).unwrap();
+        let agents = all(&env);
+        let agy = find(&agents, "antigravity");
+        assert!(agy.detected());
+        assert_eq!(
+            agy.mcp.as_ref().unwrap().path,
+            d.path().join(".gemini/config/mcp_config.json")
+        );
+        assert_eq!(agy.skills, Some(d.path().join(".gemini/config/skills")));
+    }
+
+    #[test]
+    fn pi_and_grok_follow_their_variables() {
+        let d = tempfile::tempdir().unwrap();
+        let mut env = Env::rooted(d.path());
+        let agents = all(&env);
+        assert_eq!(
+            find(&agents, "pi").mcp.as_ref().unwrap().path,
+            d.path().join(".pi/agent/mcp.json")
+        );
+        assert_eq!(
+            find(&agents, "grok").mcp.as_ref().unwrap().path,
+            d.path().join(".grok/config.toml")
+        );
+        env.pi_dir = Some(d.path().join("pi"));
+        env.grok_home = Some(d.path().join("grok"));
+        let agents = all(&env);
+        assert_eq!(find(&agents, "pi").skills, Some(d.path().join("pi/skills")));
+        assert_eq!(
+            find(&agents, "grok").mcp.as_ref().unwrap().path,
+            d.path().join("grok/config.toml")
+        );
+    }
+}

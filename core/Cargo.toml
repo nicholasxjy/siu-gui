@@ -1,0 +1,29 @@
+[package]
+name = "siu-core"
+version = "0.0.1"
+edition = "2024"
+description = "The siu-gui core sidecar: an NDJSON service wrapping siu's upstream MCP/Skills library logic."
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "siu-core"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+dirs = "7.0.0"
+flate2 = "1.1.10"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+sha2 = "0.11.0"
+tar = "0.4.46"
+tempfile = "3.27.0"
+toml_edit = "0.25.15"
+ureq = { version = "3.4.2", features = ["socks-proxy"] }
+
+[target.'cfg(windows)'.dependencies]
+junction = { version = "2.1.0", default-features = false }
+
+[dev-dependencies]
+tempfile = "3.27.0"

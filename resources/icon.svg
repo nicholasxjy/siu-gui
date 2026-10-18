@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <!--
+    Source for resources/icon.png (see scripts/gen-icon.go, which
+    rasterizes the same geometry with a tapered stroke): an iris-blue
+    square with a white flowing "S", built from two half-circle arcs of
+    radius 135 sharing one point at the center (500,500), bulging left
+    on top and right on the bottom.
+  -->
+  <rect width="1000" height="1000" fill="#4b4bc2" />
+  <path
+    d="M500,230 A135,135 0 0,0 500,500 A135,135 0 0,1 500,770"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="120"
+    stroke-linecap="round"
+  />
+</svg>

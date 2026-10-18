@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+release-assets/
+.artifacts/
+core/target/
+internal/backend/bundle/siu-core.bin
+resources/darwin*/bin/
+resources/windows*/bin/
+resources/linux*/bin/
+*.log
+.DS_Store
+.pi/
