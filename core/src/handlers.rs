@@ -58,6 +58,7 @@ fn open_store() -> Result<(env::Resolved, Store), String> {
 pub fn dispatch(app: &App, method: &str, params: &Value) -> HResult {
     match method {
         "snapshot" => h_snapshot(app),
+        "export_config" | "preview_config" | "import_config" => h_config(app, method, params),
         "proxy_settings" => {
             serde_json::to_value(crate::proxy::current().map_err(|e| format!("{e:#}"))?)
                 .map_err(|e| format!("{e:#}"))
@@ -95,6 +96,9 @@ pub fn mutates(method: &str) -> bool {
     matches!(
         method,
         "set_proxy_settings"
+            | "export_config"
+            | "preview_config"
+            | "import_config"
             | "sync"
             | "save_server"
             | "set_agents"
@@ -108,13 +112,45 @@ pub fn mutates(method: &str) -> bool {
     )
 }
 
+fn h_config(app: &App, method: &str, params: &Value) -> HResult {
+    let path = std::path::PathBuf::from(params_str(params, "path")?);
+    if !path.is_absolute() {
+        return Err("请选择绝对路径的 JSON 文件".into());
+    }
+    let (resolved, mut store) = open_store()?;
+    let result = match method {
+        "export_config" => {
+            crate::backup::export(&store, &resolved.env.home, &path, opt_str(params, "theme"))
+        }
+        "preview_config" => crate::backup::preview(&store, &resolved.env.home, &path),
+        "import_config" => crate::backup::import(
+            &mut store,
+            &resolved.env.home,
+            &app.version,
+            &path,
+            &params_str(params, "digest")?,
+        ),
+        _ => unreachable!(),
+    };
+    result.map_err(|e| format!("{e:#}"))
+}
+
 fn h_snapshot(app: &App) -> HResult {
-    let (resolved, store) = open_store()?;
-    Ok(protocol::build_snapshot(
-        &store,
-        &resolved.env.home,
-        &app.version,
-    ))
+    let resolved = env::resolve();
+    let (applied, mut issues) = match crate::backup::apply_default(app, &resolved) {
+        Ok(result) => result,
+        Err(error) => (None, vec![format!("config.json 自动恢复失败：{error:#}")]),
+    };
+    let store = Store::open(&resolved.env, resolved.root.clone()).map_err(|e| format!("{e:#}"))?;
+    let mut snapshot = protocol::build_snapshot(&store, &resolved.env.home, &app.version);
+    snapshot["issues"]
+        .as_array_mut()
+        .unwrap()
+        .extend(issues.drain(..).map(Value::String));
+    if let Some(applied) = applied {
+        snapshot["autoConfig"] = serde_json::to_value(applied).map_err(|e| e.to_string())?;
+    }
+    Ok(snapshot)
 }
 
 fn prune_if_safe(store: &Store, report: &Report) {

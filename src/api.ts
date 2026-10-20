@@ -44,6 +44,14 @@ export const api = {
     if (!isMyGo()) throw new Error("请在桌面应用中使用文件夹选择器。");
     return call<string>("Desktop.PickDirectory");
   },
+  async pickConfigFile(): Promise<string> {
+    if (!isMyGo()) throw new Error("请在桌面应用中选择 JSON 配置文件。");
+    return call<string>("Desktop.PickConfigFile");
+  },
+  async pickConfigDestination(): Promise<string> {
+    if (!isMyGo()) throw new Error("请在桌面应用中选择 JSON 保存位置。");
+    return call<string>("Desktop.PickConfigDestination");
+  },
   async openPath(path: string): Promise<void> {
     if (!isMyGo()) throw new Error("请在桌面应用中打开配置文件。");
     await call("Desktop.OpenPath", path);

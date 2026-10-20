@@ -633,6 +633,134 @@ try {
     },
   );
   await click("深色");
+  await check("JSON 导出与预览恢复保留资源、代理和主题", async () => {
+    const path = join(home, "portable-config.json");
+    const original = await state();
+    // Native picker UI is unavailable in Chromium; only the picker is
+    // substituted. React, file I/O and every Go/Rust request stay real.
+    await js(
+      'import("/src/api.ts").then(({api})=>{api.pickConfigDestination=async()=> ' +
+        JSON.stringify(path) +
+        ";api.pickConfigFile=async()=> " +
+        JSON.stringify(path) +
+        ";})",
+    );
+    await click("导出 JSON");
+    await waitText("已导出");
+    const backup = JSON.parse(await readFile(path, "utf8"));
+    assert.equal(backup.format, "siu-gui-backup");
+    assert.equal(backup.theme, "dark");
+    assert.equal(backup.mcp.length, original.mcp.length);
+    assert.equal(backup.skills.length, original.skills.length);
+    assert.ok(
+      backup.skills.some((s: { files: { path: string }[] }) =>
+        s.files.some((f) => f.path === "SKILL.md"),
+      ),
+    );
+    await request("save_server", {
+      server: {
+        name: "temporary-migration",
+        transport: "stdio",
+        command: "fixture-runner",
+        args: [],
+        env: {},
+        url: "",
+        headers: {},
+      },
+      agents: [],
+    });
+    await click("浅色");
+    await browser(
+      "find",
+      "role",
+      "button",
+      "click",
+      "--name",
+      "重新扫描 Agent",
+      "--exact",
+    );
+    await click("导入 JSON");
+    await waitText("请确认备份内容与替换范围。");
+    await browser("press", "1");
+    assert.ok((await browser("get", "count", '[role="dialog"]')).includes("1"));
+    await browser("screenshot", join(artifacts, "08-config-restore.png"));
+    await click("确认恢复");
+    await waitText("恢复前的配置已备份到");
+    const restored = await state();
+    assert.deepEqual(restored.mcp, original.mcp);
+    assert.deepEqual(restored.skills, original.skills);
+    assert.equal(
+      (await request<{ mode: string }>("proxy_settings")).mode,
+      "system",
+    );
+    assert.ok(
+      (await js("document.documentElement.dataset.theme")).includes("dark"),
+    );
+    await click("关闭");
+  });
+  await check(
+    "放入 .siu/config.json 后刷新自动恢复且主题只应用一次",
+    async () => {
+      const original = await state();
+      const config = join(home, ".siu/config.json");
+      await request("save_server", {
+        server: {
+          name: "temporary-default-config",
+          transport: "stdio",
+          command: "fixture-runner",
+          args: [],
+          env: {},
+          url: "",
+          headers: {},
+        },
+        agents: [],
+      });
+      await click("浅色");
+      await writeFile(
+        config,
+        await readFile(join(home, "portable-config.json")),
+      );
+      await browser(
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "重新扫描 Agent",
+        "--exact",
+      );
+      await browser(
+        "wait",
+        "--fn",
+        'document.documentElement.dataset.theme === "dark"',
+      );
+      const restored = await state();
+      assert.deepEqual(restored.mcp, original.mcp);
+      assert.deepEqual(restored.skills, original.skills);
+      assert.equal(restored.autoConfig?.theme, "dark");
+      assert.equal(
+        JSON.parse(
+          await readFile(join(home, ".siu/config.applied.json"), "utf8"),
+        ).digest,
+        restored.autoConfig?.digest,
+      );
+      await click("浅色");
+      await browser(
+        "find",
+        "role",
+        "button",
+        "click",
+        "--name",
+        "重新扫描 Agent",
+        "--exact",
+      );
+      assert.ok(
+        (await js("document.documentElement.dataset.theme")).includes("light"),
+      );
+      await click("深色");
+      await rm(config);
+    },
+  );
   await browser("press", "1");
   await browser("screenshot", join(artifacts, "05-mcp-dark.png"));
   await check("主题切换持久化并应用到页面", async () => {

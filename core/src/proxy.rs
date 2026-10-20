@@ -29,7 +29,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    fn validate(mut self) -> Result<Self> {
+    pub(crate) fn validate(mut self) -> Result<Self> {
         self.url = self.url.trim().to_string();
         self.no_proxy = self.no_proxy.trim().to_string();
         if self.url.len() > 4096 || self.no_proxy.len() > 8192 {

@@ -62,7 +62,7 @@ func (d *Desktop) closeClient() {
 }
 
 // defaultRequestTimeout bounds how long most core requests wait for a
-// response: local library reads and writes (snapshot, save_server,
+// response: local library reads and writes (save_server,
 // set_agents, set_enabled, delete, import, skill_content, release_scan).
 // Generous enough for file I/O, still gives the user feedback instead of
 // hanging forever if siu-core becomes unresponsive.
@@ -78,6 +78,8 @@ const discoverRequestTimeout = 150 * time.Second
 // "install_skills" and "install_server" may still be finishing a download
 // started by scan/discover). Several times upstream's own ~60s per-request
 // budget, since siu-core may retry or chain more than one network call.
+// Configuration transfers and snapshot (which may restore config.json) use
+// this budget too for large local Skill trees.
 const downloadRequestTimeout = 3 * time.Minute
 
 // updateRequestTimeout is the longest budget: "update" fetches and
@@ -95,7 +97,7 @@ func requestTimeout(method string) time.Duration {
 	switch method {
 	case "update":
 		return updateRequestTimeout
-	case "scan_skills", "install_skills", "install_server":
+	case "snapshot", "scan_skills", "install_skills", "install_server", "export_config", "preview_config", "import_config":
 		return downloadRequestTimeout
 	case "discover":
 		return discoverRequestTimeout
@@ -146,6 +148,34 @@ func (d *Desktop) PickDirectory(ctx context.Context) (string, error) {
 		return "", nil
 	}
 	return paths[0], nil
+}
+
+// PickConfigFile selects a portable siu JSON backup for preview.
+func (d *Desktop) PickConfigFile(ctx context.Context) (string, error) {
+	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
+		Parent:  mygo.CallerWindow(ctx),
+		Title:   "导入 siu 配置",
+		Filters: []mygo.FileFilter{{Name: "siu JSON 配置", Extensions: []string{"json"}}},
+	})
+	if err != nil || len(paths) == 0 {
+		return "", err
+	}
+	return paths[0], nil
+}
+
+// PickConfigDestination leaves overwrite confirmation to the native save dialog.
+func (d *Desktop) PickConfigDestination(ctx context.Context) (string, error) {
+	path, err := mygo.Dialog.Save(mygo.SaveDialogOptions{
+		Parent:            mygo.CallerWindow(ctx),
+		Title:             "导出 siu 配置",
+		DefaultPath:       "siu-config-" + time.Now().Format("2006-01-02") + ".json",
+		Filters:           []mygo.FileFilter{{Name: "siu JSON 配置", Extensions: []string{"json"}}},
+		CreateDirectories: true,
+	})
+	if err != nil || path == "" {
+		return "", err
+	}
+	return path, nil
 }
 
 // OpenPath opens an existing file or directory with the OS's default

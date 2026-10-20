@@ -42,6 +42,14 @@ export const Desktop = {
   openURL(rawURL: string): Promise<void> {
     return call("Desktop.OpenURL", rawURL);
   },
+  /** PickConfigDestination leaves overwrite confirmation to the native save dialog. */
+  pickConfigDestination(): Promise<string> {
+    return call("Desktop.PickConfigDestination");
+  },
+  /** PickConfigFile selects a portable siu JSON backup for preview. */
+  pickConfigFile(): Promise<string> {
+    return call("Desktop.PickConfigFile");
+  },
   /**
    * PickDirectory shows a native directory picker anchored to the calling
    * window (ctx carries it; see mygo.CallerWindow) and returns the chosen

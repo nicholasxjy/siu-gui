@@ -18,6 +18,34 @@ beforeEach(() => {
   vi.mocked(api.request).mockReset();
 });
 describe("写入与快照的一致性", () => {
+  it("自动恢复主题只应用一次，保留之后的选择，并在配置摘要变化时更新", async () => {
+    let snapshot = {
+      ...fixture(),
+      autoConfig: { digest: "first", theme: "dark" as const },
+    };
+    vi.mocked(api.request).mockImplementation(
+      async <T>(): Promise<T> => snapshot as T,
+    );
+    const first = renderHook(() => useApplication());
+    await waitFor(() => expect(first.result.current.theme).toBe("dark"));
+    act(() => first.result.current.setTheme("light"));
+    await act(async () => {
+      await first.result.current.refresh();
+    });
+    expect(first.result.current.theme).toBe("light");
+    first.unmount();
+    const second = renderHook(() => useApplication());
+    await waitFor(() => expect(second.result.current.snapshot).not.toBeNull());
+    expect(second.result.current.theme).toBe("light");
+    snapshot = {
+      ...snapshot,
+      autoConfig: { digest: "changed", theme: "dark" },
+    };
+    await act(async () => {
+      await second.result.current.refresh();
+    });
+    expect(second.result.current.theme).toBe("dark");
+  });
   it("写入失败后重新读取实际配置，并保留错误而不提示成功", async () => {
     vi.mocked(api.request).mockImplementation(
       async <T>(method: string): Promise<T> => {

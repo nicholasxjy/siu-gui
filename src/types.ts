@@ -51,6 +51,7 @@ export interface FoundSkill {
   at: { agent: string; path: string }[];
 }
 export interface Snapshot {
+  autoConfig?: { digest: string; theme?: Theme | null };
   home: string;
   root: string;
   platform: string;
@@ -67,6 +68,18 @@ export interface MutationResult {
   report: { changed: number; issues: string[] };
   message: string;
   log?: string;
+  theme?: Theme;
+}
+export interface ConfigExport {
+  path: string;
+  mcpCount: number;
+  skillCount: number;
+}
+export interface ConfigPreview extends ConfigExport {
+  digest: string;
+  exportedAt: number;
+  issues: string[];
+  theme?: Theme;
 }
 export interface MarketInput {
   key: string;

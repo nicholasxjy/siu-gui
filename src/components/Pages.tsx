@@ -1,10 +1,20 @@
+import { useState } from "react";
 import { api, errorMessage } from "../api";
 import { APP_VERSION } from "../version";
-import type { AppInfo, DialogState, Kind, Snapshot, Theme } from "../types";
+import type {
+  AppInfo,
+  DialogState,
+  Kind,
+  Mutate,
+  MutationResult,
+  Snapshot,
+  Theme,
+} from "../types";
 import { Avatar, Icon } from "../icons";
 import { agentLabel, shortPath } from "../utils";
 import { Note } from "./Modal";
 import { ProxySettingsForm } from "./ProxySettings";
+import { ConfigTransfer } from "./ConfigTransfer";
 export function AgentsPage({
   snapshot,
   busy,
@@ -164,6 +174,8 @@ export function SettingsPage({
   notify,
   busy,
   onDialog,
+  mutate,
+  onDone,
 }: {
   snapshot: Snapshot;
   info: AppInfo;
@@ -172,7 +184,15 @@ export function SettingsPage({
   notify: (message: string) => void;
   busy: string;
   onDialog: (dialog: DialogState) => void;
+  mutate: Mutate;
+  onDone: (result: MutationResult, title?: string) => void;
 }) {
+  const [proxyGeneration, setProxyGeneration] = useState(0);
+  const restored = (result: MutationResult) => {
+    setProxyGeneration((generation) => generation + 1);
+    if (result.theme) setTheme(result.theme);
+    onDone(result, "恢复配置");
+  };
   const open = (path: string) =>
       void api.openPath(path).catch((e) => notify(errorMessage(e))),
     visit = (url: string) =>
@@ -226,7 +246,18 @@ export function SettingsPage({
               <span className="pill">简体中文</span>
             </div>
           </section>
-          <ProxySettingsForm busy={busy} notify={notify} />
+          <ProxySettingsForm
+            key={proxyGeneration}
+            busy={busy}
+            notify={notify}
+          />
+          <ConfigTransfer
+            snapshot={snapshot}
+            theme={theme}
+            busy={busy}
+            mutate={mutate}
+            onDone={restored}
+          />
           <section className="settings-section">
             <h2>本机数据</h2>
             <div className="setting-row">
