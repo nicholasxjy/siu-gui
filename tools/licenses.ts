@@ -86,7 +86,7 @@ const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 await license("siu-gui", pkg.version, root, "MIT");
 await license(
   "siu upstream",
-  "06333e8cbd6517b87bd918f351acf94fb678e20f",
+  "06333e8cbd6517b87bd918f351acf94fb678e20f; backup.rs: 1a3a7ef32a3c4dd9115da2e0b31fdc6680b79fdf",
   join(root, "core", "upstream"),
   "MIT",
 );

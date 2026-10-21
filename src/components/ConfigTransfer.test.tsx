@@ -263,70 +263,80 @@ describe("配置迁移", () => {
 });
 
 describe("配置恢复与应用状态", () => {
-  it("通过 mutate 更新快照、恢复主题并重新读取代理，使用现有结果对话框展示问题", async () => {
-    let imported = false;
-    const restored = result();
-    restored.snapshot.mcp = [];
-    restored.report.issues = ["Codex 配置写入失败，请检查文件权限"];
-    restored.theme = "dark";
-    vi.mocked(api.request).mockImplementation(
-      async <T,>(method: string): Promise<T> => {
-        switch (method) {
-          case "snapshot":
-            return fixture() as T;
-          case "proxy_settings":
-            return {
-              mode: imported ? "direct" : "system",
-              url: "",
-              noProxy: "",
-            } as T;
-          case "preview_config":
-            return backup as T;
-          case "import_config":
-            imported = true;
-            return restored as T;
-          default:
-            throw new Error("Unexpected request: " + method);
-        }
-      },
-    );
-    render(<App />);
-    await screen.findByRole("heading", { name: "MCP 服务" });
-    await userEvent.click(screen.getByRole("button", { name: "设置" }));
-    expect(
-      await screen.findByRole("combobox", { name: "代理模式" }),
-    ).toHaveValue("system");
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "代理模式" }),
-      "custom",
-    );
-    await userEvent.type(
-      screen.getByLabelText("代理地址"),
-      "http://draft:7890",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "导入 JSON" }));
-    await screen.findByRole("dialog", { name: "恢复配置" });
-    fireEvent.keyDown(window, { key: "1" });
-    expect(screen.getByRole("heading", { name: "设置" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "确认恢复" }));
-    const dialog = await screen.findByRole("dialog", {
-      name: "操作完成，有项目需要处理",
-    });
-    expect(dialog).toHaveTextContent(restored.report.issues[0]);
-    expect(api.request).toHaveBeenCalledWith("import_config", {
-      path: backup.path,
-      digest: backup.digest,
-    });
-    await waitFor(() => expect(api.setTheme).toHaveBeenCalledWith("dark"));
-    expect(localStorage.getItem("siu.theme.v1")).toBe("dark");
-    await userEvent.click(within(dialog).getByRole("button", { name: "关闭" }));
-    expect(
-      await screen.findByRole("combobox", { name: "代理模式" }),
-    ).toHaveValue("direct");
-    expect(api.request).toHaveBeenCalledTimes(5);
-    expect(screen.getByRole("button", { name: "清空MCP 服务" })).toBeDisabled();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      restored.report.issues[0],
-    );
-  });
+  it.each(["dark", null] as const)(
+    "通过 mutate 恢复资源与代理，并处理备份主题 %s",
+    async (theme) => {
+      localStorage.setItem("siu.theme.v1", "light");
+      let imported = false;
+      const restored = result();
+      restored.snapshot.mcp = [];
+      restored.report.issues = ["Codex 配置写入失败，请检查文件权限"];
+      restored.theme = theme;
+      vi.mocked(api.request).mockImplementation(
+        async <T,>(method: string): Promise<T> => {
+          switch (method) {
+            case "snapshot":
+              return fixture() as T;
+            case "proxy_settings":
+              return {
+                mode: imported ? "direct" : "system",
+                url: "",
+                noProxy: "",
+              } as T;
+            case "preview_config":
+              return backup as T;
+            case "import_config":
+              imported = true;
+              return restored as T;
+            default:
+              throw new Error("Unexpected request: " + method);
+          }
+        },
+      );
+      render(<App />);
+      await screen.findByRole("heading", { name: "MCP 服务" });
+      await userEvent.click(screen.getByRole("button", { name: "设置" }));
+      expect(
+        await screen.findByRole("combobox", { name: "代理模式" }),
+      ).toHaveValue("system");
+      await userEvent.selectOptions(
+        screen.getByRole("combobox", { name: "代理模式" }),
+        "custom",
+      );
+      await userEvent.type(
+        screen.getByLabelText("代理地址"),
+        "http://draft:7890",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "导入 JSON" }));
+      await screen.findByRole("dialog", { name: "恢复配置" });
+      fireEvent.keyDown(window, { key: "1" });
+      expect(screen.getByRole("heading", { name: "设置" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "确认恢复" }));
+      const dialog = await screen.findByRole("dialog", {
+        name: "操作完成，有项目需要处理",
+      });
+      expect(dialog).toHaveTextContent(restored.report.issues[0]);
+      expect(api.request).toHaveBeenCalledWith("import_config", {
+        path: backup.path,
+        digest: backup.digest,
+      });
+      await waitFor(() =>
+        expect(api.setTheme).toHaveBeenLastCalledWith(theme ?? "light"),
+      );
+      expect(localStorage.getItem("siu.theme.v1")).toBe(theme ?? "light");
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "关闭" }),
+      );
+      expect(
+        await screen.findByRole("combobox", { name: "代理模式" }),
+      ).toHaveValue("direct");
+      expect(api.request).toHaveBeenCalledTimes(5);
+      expect(
+        screen.getByRole("button", { name: "清空MCP 服务" }),
+      ).toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        restored.report.issues[0],
+      );
+    },
+  );
 });

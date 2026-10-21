@@ -68,7 +68,7 @@ export interface MutationResult {
   report: { changed: number; issues: string[] };
   message: string;
   log?: string;
-  theme?: Theme;
+  theme?: Theme | null;
 }
 export interface ConfigExport {
   path: string;
@@ -79,7 +79,7 @@ export interface ConfigPreview extends ConfigExport {
   digest: string;
   exportedAt: number;
   issues: string[];
-  theme?: Theme;
+  theme?: Theme | null;
 }
 export interface MarketInput {
   key: string;

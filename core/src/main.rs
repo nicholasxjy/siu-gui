@@ -3,8 +3,8 @@
 //! Vendored upstream siu modules live physically under `core/upstream/`
 //! (see `core/UPSTREAM.md`) but are declared here with `#[path]` as plain
 //! crate-root modules — `crate::agents`, `crate::library`, `crate::mcp`,
-//! and so on, exactly as they are inside upstream's own `main.rs`. That
-//! keeps every internal `crate::library::...`/`crate::mcp::...` reference
+//! `crate::portable_backup` (upstream's `backup`) and so on. That keeps
+//! every internal `crate::library::...`/`crate::mcp::...` reference
 //! inside the vendored files unchanged from upstream, so a diff against
 //! the original file stays small and reviewable; only the deviations
 //! documented at the top of each vendored file (and in UPSTREAM.md) are
@@ -33,6 +33,9 @@ mod market;
 mod mcp;
 #[path = "../upstream/net.rs"]
 mod net;
+#[path = "../upstream/backup.rs"]
+#[allow(dead_code)]
+mod portable_backup;
 #[path = "../upstream/skills.rs"]
 mod skills;
 #[path = "../upstream/update.rs"]
