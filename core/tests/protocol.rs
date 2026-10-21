@@ -647,7 +647,7 @@ fn config_file_bytes(skill: &Value, path: &str) -> Vec<u8> {
 }
 
 fn config_safety_backups(home: &Path) -> Vec<PathBuf> {
-    let root = home.join(".siu/backups");
+    let root = home.join(".siu").join("backups");
     if !root.exists() {
         return vec![];
     }
