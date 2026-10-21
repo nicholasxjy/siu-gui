@@ -126,7 +126,12 @@ function Application() {
   const issues = [...new Set([...app.alert, ...(snapshot?.issues || [])])];
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || dialog) return;
+      if (
+        event.defaultPrevented ||
+        dialog ||
+        document.querySelector('[aria-modal="true"]')
+      )
+        return;
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "r") {
         event.preventDefault();
         if (!busy) void app.refresh();
@@ -350,6 +355,8 @@ function Application() {
                     notify={app.notify}
                     busy={busy}
                     onDialog={setDialog}
+                    mutate={app.mutate}
+                    onDone={done}
                   />
                 )}
               </>

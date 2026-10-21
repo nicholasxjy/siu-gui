@@ -23,7 +23,8 @@ export function useApplication() {
   });
   const busyRef = useRef(false),
     generation = useRef(0),
-    mounted = useRef(true);
+    mounted = useRef(true),
+    appliedConfig = useRef("");
   const notify = useCallback((text: string) => setToast(text), []);
   const refresh = useCallback(async (force = false) => {
     if (busyRef.current && !force) return;
@@ -32,6 +33,25 @@ export function useApplication() {
       const value = await api.request<Snapshot>("snapshot");
       if (mounted.current && id === generation.current) {
         setSnapshot(value);
+        if (value.autoConfig) {
+          const key = JSON.stringify([value.root, value.autoConfig.digest]);
+          if (appliedConfig.current !== key) {
+            let saved = "";
+            try {
+              saved = localStorage.getItem("siu.auto-config.v1") || "";
+            } catch {
+              /* The in-memory receipt also works without web storage. */
+            }
+            if (saved !== key && value.autoConfig.theme)
+              setThemeState(value.autoConfig.theme);
+            appliedConfig.current = key;
+            try {
+              localStorage.setItem("siu.auto-config.v1", key);
+            } catch {
+              /* Keep the current session usable with read-only storage. */
+            }
+          }
+        }
       }
     } catch (e) {
       if (mounted.current && id === generation.current)

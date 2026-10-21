@@ -78,12 +78,15 @@ func TestRequestTimeout(t *testing.T) {
 		method string
 		want   time.Duration
 	}{
-		{"snapshot", defaultRequestTimeout},
+		{"snapshot", downloadRequestTimeout},
 		{"", defaultRequestTimeout},
 		{"discover", discoverRequestTimeout},
 		{"scan_skills", downloadRequestTimeout},
 		{"install_skills", downloadRequestTimeout},
 		{"install_server", downloadRequestTimeout},
+		{"export_config", downloadRequestTimeout},
+		{"preview_config", downloadRequestTimeout},
+		{"import_config", downloadRequestTimeout},
 		{"update", updateRequestTimeout},
 	}
 	for _, c := range cases {

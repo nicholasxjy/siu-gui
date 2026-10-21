@@ -39,6 +39,7 @@ mod skills;
 #[allow(dead_code)]
 mod update;
 
+mod backup;
 mod env;
 mod guard;
 mod handlers;

@@ -66,7 +66,7 @@ func requestTimeout(method string) time.Duration {
 	switch method {
 	case "update":
 		return updateRequestTimeout
-	case "scan_skills", "install_skills", "install_server":
+	case "snapshot", "scan_skills", "install_skills", "install_server", "export_config", "preview_config", "import_config":
 		return downloadRequestTimeout
 	case "discover":
 		return discoverRequestTimeout
