@@ -1,6 +1,6 @@
 [package]
 name = "siu-core"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2024"
 description = "The siu-gui core sidecar: an NDJSON service wrapping siu's upstream MCP/Skills library logic."
 license = "MIT"

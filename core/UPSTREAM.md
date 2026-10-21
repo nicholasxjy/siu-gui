@@ -47,7 +47,9 @@ of the GUI's stricter validation when editing a download route. The adapter
 keeps ordinary snapshots concurrent and locks only a pending default restore;
 it does not implement a second restore engine. Exporting a default file does
 not mark it applied. Both applications use the same `config.applied.json`
-receipt after restoring it.
+receipt after restoring it. The path-rebasing test builds expected paths
+from individual components so its string assertions use native separators
+on Windows as well as Unix.
 
 **`agents.rs`** — `Env::rooted` is no longer `#[cfg(test)]`-gated. siu-gui's
 `SIU_GUI_TEST_HOME` isolation (`core/src/env.rs`) needs to build a fully

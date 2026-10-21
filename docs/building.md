@@ -37,7 +37,7 @@ bun run build --platform darwin/arm64
 bun run build --platform darwin/universal   # 需要 macOS SDK 与 lipo
 ```
 
-六个平台目标：`darwin/arm64`、`darwin/amd64`、`windows/amd64`、`windows/arm64`、`linux/amd64`、`linux/arm64`。Go/mygo 支持交叉编译，Rust sidecar 需要对应目标的标准库和链接器；可靠的发布流程在目标系统原生 runner 上构建，见 [build.yml](../.github/workflows/build.yml)。
+六个平台目标：`darwin/arm64`、`darwin/amd64`、`windows/amd64`、`windows/arm64`、`linux/amd64`、`linux/arm64`；发布工作流另构建 `darwin/universal`，同时提供 macOS 通用安装包。Go/mygo 支持交叉编译，Rust sidecar 需要对应目标的标准库和链接器；可靠的发布流程在目标系统原生 runner 上构建，见 [build.yml](../.github/workflows/build.yml)。
 
 Universal 会编译两种 Rust 核心，mygo 自动将两个平台的 sidecar 和 Go 主程序合并为通用二进制。
 
@@ -76,7 +76,7 @@ bun run generate:icon
 
 本机 macOS 构建使用 ad-hoc 签名，可用于本机验证。对外分发需按 [mygo 签名说明](https://github.com/egoist/mygo/blob/main/docs/distribution.md) 配置 Developer ID 及公证；CI 不嵌入任何证书。
 
-推送 `v*` 标签后，工作流在所有构建成功后创建 **draft release** 并附上各平台安装包，不自动发布。发布脚本（`scripts/release.ts`）从构建目录选取当前版本安装包，输出带平台与架构的唯一文件名（如 `siu-gui_<version>_macos_arm64.dmg`）；缺失包或重复候选会阻止发布。CI 为全部资产生成 `SHA256SUMS.txt`。
+推送 `v*` 标签后，工作流在所有构建成功后创建 **draft release** 并附上各平台安装包，不自动发布。发布脚本（`scripts/release.ts`）从构建目录选取当前版本安装包，输出带平台与架构的唯一文件名（如 `siu-gui_<version>_macos_arm64.dmg`）；缺失包或重复候选会阻止发布。CI 确认九个安装包齐全后，为全部资产生成 `SHA256SUMS.txt`。
 
 ## 许可证
 

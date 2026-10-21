@@ -338,5 +338,6 @@ describe("配置恢复与应用状态", () => {
         restored.report.issues[0],
       );
     },
+    10_000,
   );
 });

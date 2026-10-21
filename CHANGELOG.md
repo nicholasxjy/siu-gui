@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.4
+
+- Export the managed setup as one portable JSON file containing MCP definitions and credentials, embedded Skills files and executable flags, enabled states, Agent assignments, proxy settings and the desktop theme.
+- Preview and restore backups from settings, with a safety backup before replacement, path rebasing on the destination, protection for unmanaged resources and rollback on local persistence failures.
+- Restore a new or changed `~/.siu/config.json` (or `$SIU_HOME/config.json`) at startup and refresh. Share the applied digest with the siu CLI so later local edits survive refreshes and restarts.
+- Reuse the siu CLI backup core and verify imports in both directions. Preserve the current desktop theme when importing a CLI backup without a theme.
+- Cover portable files, binary assets, script permissions, recovery records and cross-platform path handling with regression tests.
+- Include macOS ARM64, Intel and Universal installers alongside Windows and Linux x64/ARM64 packages, with SHA-256 checksums for every download.
+
 ## 0.0.3
 
 - Redesign the application icon around an S-shaped route connecting a resource module to an Agent, with an iris-blue tile, mint accent and transparent corners.

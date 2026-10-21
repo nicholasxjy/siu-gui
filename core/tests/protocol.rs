@@ -1041,21 +1041,29 @@ fn config_import_rebases_home_and_separate_siu_root_prefixes_without_rewriting_u
     let home_command = config_entry(&result["snapshot"], "mcp", "home-command");
     assert_eq!(
         home_command["command"],
-        json!(destination.path().join("bin/runner"))
+        json!(destination.path().join("bin").join("runner"))
     );
     assert_eq!(home_command["states"]["claude"], "on");
     assert_eq!(
         server["command"],
-        json!(destination.path().join(".siu/bin/runner"))
+        json!(destination.path().join(".siu").join("bin").join("runner"))
     );
     assert_eq!(
         server["args"],
         json!([
-            destination.path().join("projects/with spaces/资料"),
-            destination.path().join(".siu/skills/home-source"),
+            destination
+                .path()
+                .join("projects")
+                .join("with spaces")
+                .join("资料"),
+            destination
+                .path()
+                .join(".siu")
+                .join("skills")
+                .join("home-source"),
             format!(
                 "--cache={}",
-                destination.path().join(".siu/cache").display()
+                destination.path().join(".siu").join("cache").display()
             ),
             destination.path(),
             destination.path().join(".siu"),
@@ -1068,7 +1076,7 @@ fn config_import_rebases_home_and_separate_siu_root_prefixes_without_rewriting_u
         server["env"],
         json!({
             "HOME_DATA": destination.path().join("data"),
-            "SIU_DATA": destination.path().join(".siu/data"),
+            "SIU_DATA": destination.path().join(".siu").join("data"),
             "UNCHANGED": format!("{old_root}-other/data"),
         })
     );
@@ -1083,7 +1091,7 @@ fn config_import_rebases_home_and_separate_siu_root_prefixes_without_rewriting_u
         let skill = config_entry(&result["snapshot"], "skills", name);
         assert_eq!(
             skill["source"],
-            json!({"kind":"local","dir":destination.path().join(relative)})
+            json!({"kind":"local","dir":destination.path().join(relative.split('/').collect::<PathBuf>())})
         );
         assert_eq!(skill["states"]["claude"], "on");
         assert!(
@@ -1607,7 +1615,7 @@ fn config_cli_fixture_restores_and_reexports_without_losing_portable_state() {
     }
     assert_eq!(
         skill["source"]["dir"],
-        json!(home.path().join("sources/portable"))
+        json!(home.path().join("sources").join("portable"))
     );
     assert_eq!(
         std::fs::read(home.path().join(".siu/skills/portable/assets/opaque.bin")).unwrap(),
@@ -1640,7 +1648,11 @@ fn config_cli_fixture_restores_and_reexports_without_losing_portable_state() {
             exported["args"][1],
             format!(
                 "--data={}",
-                home.path().join(".siu/skills/portable").display()
+                home.path()
+                    .join(".siu")
+                    .join("skills")
+                    .join("portable")
+                    .display()
             )
         );
     }

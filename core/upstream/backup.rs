@@ -962,7 +962,7 @@ mod tests {
             backup.source_root = root.into();
             assert_eq!(
                 rebase(file, &backup, &destination, temp.path()),
-                temp.path().join("tools/file").to_string_lossy()
+                temp.path().join("tools").join("file").to_string_lossy()
             );
             assert_eq!(
                 rebase(
@@ -980,7 +980,10 @@ mod tests {
                     &destination,
                     temp.path()
                 ),
-                format!("--path={}", temp.path().join("tools/file").display())
+                format!(
+                    "--path={}",
+                    temp.path().join("tools").join("file").display()
+                )
             );
             let token = format!("Bearer token-{home}/secret");
             assert_eq!(rebase(&token, &backup, &destination, temp.path()), token);
