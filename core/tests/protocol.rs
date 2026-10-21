@@ -1569,6 +1569,199 @@ fn config_export_rejects_relative_paths_live_library_agent_files_and_skill_direc
     }
 }
 
+// Exported by unmodified siu 1a3a7ef. Only source paths, timestamp and
+// platform are normalized; the fixture deliberately has no GUI theme.
+const SIU_BACKUP_V1: &str = include_str!("fixtures/siu-backup-v1.json");
+
+#[test]
+fn config_cli_fixture_restores_and_reexports_without_losing_portable_state() {
+    let home = tempfile::tempdir().unwrap();
+    let exports = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(home.path().join(".claude")).unwrap();
+    let path = exports.path().join("cli.json");
+    std::fs::write(&path, SIU_BACKUP_V1).unwrap();
+    let mut p = Proc::start(home.path());
+    let preview = p.ok("preview_config", json!({"path":path}));
+    assert_eq!(preview["mcpCount"], 2);
+    assert_eq!(preview["skillCount"], 1);
+    assert!(preview["theme"].is_null());
+    assert_eq!(preview["issues"], json!([]));
+    let restored = p.ok(
+        "import_config",
+        json!({"path":path,"digest":preview["digest"]}),
+    );
+    assert!(restored["theme"].is_null());
+    assert_eq!(restored["report"]["issues"], json!([]));
+    let snapshot = &restored["snapshot"];
+    assert_eq!(
+        config_entry(snapshot, "mcp", "paused")["states"]["claude"],
+        "paused"
+    );
+    assert_eq!(
+        config_entry(snapshot, "mcp", "portable")["states"]["claude"],
+        "on"
+    );
+    let skill = config_entry(snapshot, "skills", "portable");
+    for agent in ["claude", "agents"] {
+        assert_eq!(skill["states"][agent], "on");
+    }
+    assert_eq!(
+        skill["source"]["dir"],
+        json!(home.path().join("sources/portable"))
+    );
+    assert_eq!(
+        std::fs::read(home.path().join(".siu/skills/portable/assets/opaque.bin")).unwrap(),
+        [0, 255, 128, 10, 13, 0]
+    );
+    let source: Value = serde_json::from_str(SIU_BACKUP_V1).unwrap();
+    assert_eq!(p.ok("proxy_settings", json!({})), source["proxy"]);
+
+    let roundtrip = exports.path().join("gui.json");
+    p.ok("export_config", json!({"path":roundtrip,"theme":"dark"}));
+    let output = config_read_json(&roundtrip);
+    assert_eq!(output["format"], source["format"]);
+    assert_eq!(output["version"], source["version"]);
+    assert_eq!(output["theme"], "dark");
+    assert_eq!(output["proxy"], source["proxy"]);
+    assert!(output.get("applied").is_none());
+    for (original, exported) in source["mcp"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(output["mcp"].as_array().unwrap())
+    {
+        assert_eq!(exported["name"], original["name"]);
+        assert_eq!(exported["enabled"], original["enabled"]);
+        assert_eq!(exported["agents"], original["agents"]);
+        assert_eq!(exported["origin"], original["origin"]);
+        assert_eq!(exported["env"]["TOKEN"], original["env"]["TOKEN"]);
+        assert_eq!(exported["env"]["FILE"], json!(home.path().join("data")));
+        assert_eq!(
+            exported["args"][1],
+            format!(
+                "--data={}",
+                home.path().join(".siu/skills/portable").display()
+            )
+        );
+    }
+    for file in source["skills"][0]["files"].as_array().unwrap() {
+        let name = file["path"].as_str().unwrap();
+        assert_eq!(
+            config_file_bytes(&output["skills"][0], name),
+            config_file_bytes(&source["skills"][0], name)
+        );
+        #[cfg(unix)]
+        assert_eq!(
+            output["skills"][0]["files"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|f| f["path"] == name)
+                .unwrap()["executable"],
+            file["executable"]
+        );
+    }
+}
+
+#[test]
+fn default_config_honors_a_theme_free_cli_receipt_and_preserves_local_edits() {
+    let home = tempfile::tempdir().unwrap();
+    let mut p = Proc::start(home.path());
+    config_add_server(&mut p, "local", "local-runner", &[]);
+    let config = home.path().join(".siu/config.json");
+    std::fs::write(&config, SIU_BACKUP_V1).unwrap();
+    let receipt = json!({"digest":config_digest(&config)});
+    config_write_json(&home.path().join(".siu/config.applied.json"), &receipt);
+    let snapshot = p.ok("snapshot", json!({}));
+    assert_eq!(snapshot["mcp"].as_array().unwrap().len(), 1);
+    assert_eq!(snapshot["mcp"][0]["name"], "local");
+    assert_eq!(snapshot["autoConfig"], receipt);
+    assert!(config_safety_backups(home.path()).is_empty());
+    drop(p);
+    let mut p = Proc::start(home.path());
+    assert_eq!(p.ok("snapshot", json!({})), snapshot);
+}
+
+#[test]
+fn default_config_export_is_unapplied_until_restore_and_explicit_import_records_it() {
+    let home = tempfile::tempdir().unwrap();
+    let mut p = Proc::start(home.path());
+    config_add_server(&mut p, "portable", "portable-runner", &[]);
+    let config = home.path().join(".siu/config.json");
+    p.ok("export_config", json!({"path":config}));
+    assert!(!home.path().join(".siu/config.applied.json").exists());
+    assert!(config_safety_backups(home.path()).is_empty());
+    let preview = p.ok("preview_config", json!({"path":config}));
+    p.ok(
+        "import_config",
+        json!({"path":config,"digest":preview["digest"]}),
+    );
+    assert_eq!(
+        config_read_json(&home.path().join(".siu/config.applied.json")),
+        json!({"digest":preview["digest"]})
+    );
+    p.ok(
+        "set_enabled",
+        json!({"kind":"mcp","name":"portable","enabled":false}),
+    );
+    let snapshot = p.ok("snapshot", json!({}));
+    assert_eq!(snapshot["mcp"][0]["enabled"], false);
+    assert_eq!(config_safety_backups(home.path()).len(), 1);
+}
+
+#[test]
+fn default_config_receipt_write_failure_preserves_the_restore_report_and_retries() {
+    let home = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(home.path().join(".claude")).unwrap();
+    let mut p = Proc::start(home.path());
+    config_add_server(&mut p, "previous", "previous-runner", &[]);
+    let config = home.path().join(".siu/config.json");
+    let mut backup: Value = serde_json::from_str(SIU_BACKUP_V1).unwrap();
+    backup["theme"] = json!("dark");
+    config_write_json(&config, &backup);
+    // Block only the receipt's atomic write, after the library and links
+    // have been restored, without relying on OS permissions or timing.
+    let blocked = home.path().join(".siu/config.applied.json.siu-tmp");
+    std::fs::create_dir(&blocked).unwrap();
+    let restored = p.ok("snapshot", json!({}));
+    assert_eq!(restored["autoConfig"]["theme"], "dark");
+    assert_eq!(restored["autoConfig"]["digest"], config_digest(&config));
+    assert_eq!(
+        config_entry(&restored, "mcp", "portable")["states"]["claude"],
+        "on"
+    );
+    assert!(restored["issues"].as_array().unwrap().iter().any(|i| {
+        i.as_str()
+            .unwrap()
+            .contains("couldn't note config.json as applied")
+    }));
+    assert!(!home.path().join(".siu/config.applied.json").exists());
+    assert_eq!(config_safety_backups(home.path()).len(), 1);
+    std::fs::remove_dir(blocked).unwrap();
+    let retried = p.ok("snapshot", json!({}));
+    assert_eq!(retried["issues"], json!([]));
+    assert_eq!(
+        config_read_json(&home.path().join(".siu/config.applied.json")),
+        retried["autoConfig"]
+    );
+    assert_eq!(config_safety_backups(home.path()).len(), 2);
+}
+
+#[cfg(unix)]
+#[test]
+fn config_export_protects_missing_agent_config_through_a_symlinked_home() {
+    use std::os::unix::fs::symlink;
+    let home = tempfile::tempdir().unwrap();
+    let aliases = tempfile::tempdir().unwrap();
+    let alias = aliases.path().join("home");
+    symlink(home.path(), &alias).unwrap();
+    let mut p = Proc::start(&alias);
+    let target = home.path().join(".claude.json");
+    assert!(!target.exists());
+    p.err("export_config", json!({"path":target}));
+    assert!(!target.exists());
+}
+
 #[test]
 fn default_config_restores_on_snapshot_once_and_reapplies_changed_contents() {
     let source = tempfile::tempdir().unwrap();

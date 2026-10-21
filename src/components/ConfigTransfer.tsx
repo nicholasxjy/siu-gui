@@ -88,11 +88,12 @@ export function ConfigTransfer({
         <div>
           <h3>JSON 配置备份</h3>
           <p>
-            备份 MCP、Skills、代理设置与界面主题，用于迁移或恢复。
+            与 siu 终端版使用同一 JSON 格式，可互相导入，包含 MCP、Skills
+            文件和代理设置。 桌面版导出时还会保存当前界面主题。
             <br />
-            Skills 文件内容包含在 JSON 中。也可将导出的文件放到
+            将备份保存或复制到
             <code>{shortPath(snapshot.root, snapshot.home)}/config.json</code>，
-            启动或刷新时自动恢复；相同内容只应用一次。
+            两端启动或刷新时会自动恢复，共享恢复记录；相同内容只应用一次。
           </p>
         </div>
         <div className="actions">
@@ -182,7 +183,7 @@ export function ConfigTransfer({
               </div>
               <Note warning>
                 恢复将用备份状态替换全部 siu 管理的 MCP 与 Skills，保留 Agent
-                中其他未纳管的条目。代理设置也将恢复；备份包含主题时会同步应用。
+                中其他未纳管的条目。代理设置也将恢复；备份包含主题时会同步应用，否则保留当前主题。
                 <br />
                 恢复前会自动将现有本机配置备份至资源库 backups 目录。
               </Note>

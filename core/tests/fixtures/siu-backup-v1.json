@@ -1,0 +1,88 @@
+{
+  "format": "siu-gui-backup",
+  "version": 1,
+  "exportedAt": 1,
+  "sourceHome": "/reference/home",
+  "sourceRoot": "/reference/home/.siu",
+  "platform": "linux",
+  "mcp": [
+    {
+      "name": "paused",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "fixture-package",
+        "--data=/reference/home/.siu/skills/portable"
+      ],
+      "env": {
+        "FILE": "/reference/home/data",
+        "TOKEN": "Bearer fixture-token"
+      },
+      "agents": [
+        "claude"
+      ],
+      "enabled": false,
+      "origin": "interop-fixture"
+    },
+    {
+      "name": "portable",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "fixture-package",
+        "--data=/reference/home/.siu/skills/portable"
+      ],
+      "env": {
+        "FILE": "/reference/home/data",
+        "TOKEN": "Bearer fixture-token"
+      },
+      "agents": [
+        "claude"
+      ],
+      "enabled": true,
+      "origin": "interop-fixture"
+    }
+  ],
+  "skills": [
+    {
+      "entry": {
+        "name": "portable",
+        "description": "CLI interoperability fixture",
+        "source": {
+          "kind": "local",
+          "dir": "/reference/home/sources/portable"
+        },
+        "agents": [
+          "agents",
+          "claude"
+        ],
+        "enabled": true,
+        "hash": "66dd1edfbab3c125",
+        "installed": 1,
+        "updated": 2
+      },
+      "files": [
+        {
+          "path": "SKILL.md",
+          "data": "LS0tCm5hbWU6IHBvcnRhYmxlCmRlc2NyaXB0aW9uOiBDTEkgaW50ZXJvcGVyYWJpbGl0eSBmaXh0dXJlCi0tLQpQb3J0YWJsZSBza2lsbC4K",
+          "executable": false
+        },
+        {
+          "path": "assets/opaque.bin",
+          "data": "AP+ACg0A",
+          "executable": false
+        },
+        {
+          "path": "scripts/run.sh",
+          "data": "IyEvYmluL3NoCnByaW50ZiAncG9ydGFibGVcbicK",
+          "executable": true
+        }
+      ]
+    }
+  ],
+  "proxy": {
+    "mode": "custom",
+    "url": "socks5h://127.0.0.1:1080",
+    "noProxy": "localhost,.example.test"
+  }
+}

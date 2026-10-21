@@ -1,10 +1,15 @@
 # Upstream provenance
 
-`core/upstream/` vendors nine modules from upstream **siu** (the terminal UI
-at https://github.com/nicholasxjy/siu), at commit
-`06333e8cbd6517b87bd918f351acf94fb678e20f` ("Release 0.0.5"):
+`core/upstream/` vendors ten modules from upstream **siu** (the terminal UI
+at https://github.com/nicholasxjy/siu). Nine modules come from commit
+`06333e8cbd6517b87bd918f351acf94fb678e20f` ("Release 0.0.5").
+`backup.rs` additionally comes from
+`1a3a7ef32a3c4dd9115da2e0b31fdc6680b79fdf`
+("Export, import and restore the setup as siu-gui's JSON backup"):
 
 - `agents.rs` — the agents siu knows and where each keeps MCP/Skills.
+- `backup.rs` — the shared portable JSON format, validation, export, restore,
+  rollback and default `config.json` receipt.
 - `cache.rs` — small time-stamped JSON caches.
 - `github.rs` — parsing a skill source spec and downloading a repo tarball.
 - `library.rs` — the library: MCP servers, skills, and syncing them into agents.
@@ -16,11 +21,12 @@ at https://github.com/nicholasxjy/siu), at commit
 
 Not vendored: `app.rs`, `ui.rs`, `theme.rs`, `main.rs`, and the TUI's own
 `tests.rs` — these are the terminal UI itself and have no part in a
-headless NDJSON service. `core/src/main.rs` declares the nine vendored
+headless NDJSON service. `core/src/main.rs` declares the vendored
 files as plain crate-root modules via `#[path = "../upstream/<file>.rs"]`,
 so every internal `crate::library::...` / `crate::mcp::...` reference
 inside them is unchanged from upstream and a diff against the original
-file stays small and reviewable.
+file stays small and reviewable. The upstream `backup` module is named
+`portable_backup` here; `core/src/backup.rs` is its desktop protocol adapter.
 
 `core/upstream/LICENSE` is upstream's own MIT license, copied verbatim for
 the vendored code's provenance; `core/LICENSE` covers the `siu-core` crate
@@ -29,6 +35,19 @@ itself (also MIT, same text, matching the repository's root `LICENSE`).
 ## Deviations from upstream, by file
 
 The deviations below are kept separate from the GUI policy modules.
+
+**`backup.rs`** — the portable backup implementation and its tests are
+shared with siu. Desktop-only additions expose the applied receipt, bounded
+file reader/digest, restored digest and preview theme to the protocol adapter, and add
+`export_with_theme` so the GUI can include its current theme. The upstream
+`export` API still omits a theme. Validation (including portable proxy
+settings), path protection, staging/rollback, ownership and default-restore
+deduplication follow upstream. Proxy settings in backups travel independently
+of the GUI's stricter validation when editing a download route. The adapter
+keeps ordinary snapshots concurrent and locks only a pending default restore;
+it does not implement a second restore engine. Exporting a default file does
+not mark it applied. Both applications use the same `config.applied.json`
+receipt after restoring it.
 
 **`agents.rs`** — `Env::rooted` is no longer `#[cfg(test)]`-gated. siu-gui's
 `SIU_GUI_TEST_HOME` isolation (`core/src/env.rs`) needs to build a fully
