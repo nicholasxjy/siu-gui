@@ -2,7 +2,7 @@
 
 ## 工具链依赖
 
-- Go 1.27+、Bun 1.4+、Node.js 24+、Rust 稳定版、Git。
+- Go 1.27.3+、Bun 1.4.4+、Node.js 26+（也支持 24.15+ 的 24.x）、Rust 稳定版、Git。
 - macOS：Xcode Command Line Tools（`hdiutil` 生成 DMG，`codesign` 签名）。
 - Windows：Rust MSVC 工具链与 Visual Studio C++ Build Tools；mygo 按需下载 NSIS 生成安装器。
 - Linux：GTK 3 与 WebKitGTK（`libgtk-3-0 libwebkit2gtk-4.1-0`）；中文字体可安装 `fonts-noto-cjk`。

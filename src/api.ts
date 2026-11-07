@@ -1,4 +1,5 @@
-import { call, isMyGo } from "mygo-runtime";
+import { isMyGo } from "mygo-runtime";
+import { Desktop } from "./mygo";
 import { APP_VERSION } from "./version";
 import type { AppInfo, Theme } from "./types";
 declare const __SIU_BROWSER_TEST__: boolean;
@@ -13,7 +14,7 @@ export const api = {
   ): Promise<T> {
     const payload = JSON.stringify({ method, params });
     let raw: string;
-    if (isMyGo()) raw = await call<string>("Desktop.Request", payload);
+    if (isMyGo()) raw = await Desktop.request(payload);
     else if (testing) {
       const response = await fetch("/__test/request", {
         method: "POST",
@@ -32,7 +33,7 @@ export const api = {
     return result.data;
   },
   async info(): Promise<AppInfo> {
-    if (isMyGo()) return call<AppInfo>("Desktop.Info");
+    if (isMyGo()) return Desktop.info();
     if (testing) {
       const r = await fetch("/__test/info");
       if (!r.ok) throw new Error(await r.text());
@@ -42,29 +43,29 @@ export const api = {
   },
   async pickDirectory(): Promise<string> {
     if (!isMyGo()) throw new Error("请在桌面应用中使用文件夹选择器。");
-    return call<string>("Desktop.PickDirectory");
+    return Desktop.pickDirectory();
   },
   async pickConfigFile(): Promise<string> {
     if (!isMyGo()) throw new Error("请在桌面应用中选择 JSON 配置文件。");
-    return call<string>("Desktop.PickConfigFile");
+    return Desktop.pickConfigFile();
   },
   async pickConfigDestination(): Promise<string> {
     if (!isMyGo()) throw new Error("请在桌面应用中选择 JSON 保存位置。");
-    return call<string>("Desktop.PickConfigDestination");
+    return Desktop.pickConfigDestination();
   },
   async openPath(path: string): Promise<void> {
     if (!isMyGo()) throw new Error("请在桌面应用中打开配置文件。");
-    await call("Desktop.OpenPath", path);
+    await Desktop.openPath(path);
   },
   async openURL(url: string): Promise<void> {
     const parsed = new URL(url);
     if (!["http:", "https:"].includes(parsed.protocol))
       throw new Error("仅支持 HTTP 或 HTTPS 链接。");
-    if (isMyGo()) await call("Desktop.OpenURL", parsed.toString());
+    if (isMyGo()) await Desktop.openURL(parsed.toString());
     else window.open(parsed.toString(), "_blank", "noopener,noreferrer");
   },
   async setTheme(theme: Theme): Promise<void> {
-    if (isMyGo()) await call("Desktop.SetTheme", theme);
+    if (isMyGo()) await Desktop.setTheme(theme);
   },
 };
 export const errorMessage = (error: unknown) =>

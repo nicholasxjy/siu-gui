@@ -14,15 +14,15 @@ path = "src/main.rs"
 anyhow = "1.0.104"
 base64 = "0.23.1"
 dirs = "7.0.0"
-flate2 = "1.1.10"
+flate2 = "1.1.11"
 proxy-watch = { version = "0.3.1", features = ["pac-native"] }
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.151", features = ["preserve_order"] }
-sha2 = "0.11.0"
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+sha2 = "0.11.1"
 tar = "0.4.46"
 tempfile = "3.27.0"
-toml_edit = "0.25.15"
-ureq = { version = "3.4.2", features = ["socks-proxy"] }
+toml_edit = "0.25.19"
+ureq = { version = "3.5.1", features = ["socks-proxy"] }
 
 [target.'cfg(windows)'.dependencies]
 junction = { version = "2.1.0", default-features = false }

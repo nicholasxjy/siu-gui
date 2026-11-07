@@ -1,9 +1,11 @@
 module github.com/nicholasxjy/siu-gui
 
-go 1.27.1
+go 1.27.3
+
+require github.com/egoist/mygo v0.8.3
 
 require (
-	github.com/ebitengine/purego v0.11.1 // indirect
-	github.com/egoist/mygo v0.5.6-0.20261017195139-b7f6946547d9 // indirect
+	github.com/ebitengine/purego v0.11.3 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 )
