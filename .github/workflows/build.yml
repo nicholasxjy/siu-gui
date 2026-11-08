@@ -113,10 +113,10 @@ jobs:
           mkdir release-assets
           find artifacts -path '*/release-assets/*' -type f -exec cp {} release-assets/ \;
           version=${GITHUB_REF_NAME#v}
-          for suffix in macos_arm64.dmg macos_x64.dmg macos_universal.dmg windows_x64_setup.exe windows_arm64_setup.exe linux_x64.deb linux_x64.tar.gz linux_arm64.deb linux_arm64.tar.gz; do
+          for suffix in macos_arm64.dmg macos_x64.dmg macos_universal.dmg macos_universal.zip windows_x64_setup.exe windows_arm64_setup.exe linux_x64.deb linux_x64.tar.gz linux_arm64.deb linux_arm64.tar.gz; do
             test -s "release-assets/siu-gui_${version}_${suffix}"
           done
-          test "$(find release-assets -type f | wc -l)" -eq 9
+          test "$(find release-assets -type f | wc -l)" -eq 10
           (cd release-assets && sha256sum *) > SHA256SUMS.txt
           mv SHA256SUMS.txt release-assets/
       - uses: softprops/action-gh-release@v2

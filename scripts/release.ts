@@ -20,7 +20,9 @@ export async function stageReleaseArtifacts(options: {
       : entry.goarch;
   const extensions =
     entry.goos === "darwin"
-      ? [".dmg"]
+      ? entry.universal
+        ? [".dmg", ".zip"]
+        : [".dmg"]
       : entry.goos === "windows"
         ? [".exe"]
         : [".deb", ".tar.gz"];

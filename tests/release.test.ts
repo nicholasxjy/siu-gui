@@ -23,7 +23,7 @@ describe("release artifacts", () => {
   const targets = [
     ["darwin/amd64", "macos_x64", [".dmg"]],
     ["darwin/arm64", "macos_arm64", [".dmg"]],
-    ["darwin/universal", "macos_universal", [".dmg"]],
+    ["darwin/universal", "macos_universal", [".dmg", ".zip"]],
     ["windows/amd64", "windows_x64", [".exe"]],
     ["windows/arm64", "windows_arm64", [".exe"]],
     ["linux/amd64", "linux_x64", [".deb", ".tar.gz"]],
@@ -71,6 +71,19 @@ describe("release artifacts", () => {
         outputDirectory: output,
       }),
     ).rejects.toThrow(".tar.gz");
+    await expect(access(output)).rejects.toThrow();
+  });
+  it("rejects a Universal release without its ZIP before staging any file", async () => {
+    const { path, output } = await fixture();
+    await writeFile(join(path, "Siu 0.0.1.dmg"), "dmg");
+    await expect(
+      stageReleaseArtifacts({
+        platform: "darwin/universal",
+        version: "0.0.1",
+        buildDirectory: path,
+        outputDirectory: output,
+      }),
+    ).rejects.toThrow(".zip");
     await expect(access(output)).rejects.toThrow();
   });
   it("rejects ambiguous packages and adjacent patch versions", async () => {

@@ -193,6 +193,20 @@ async function main(): Promise<void> {
     platformArg,
     ...passthrough,
   ]);
+
+  if (entries.some((entry) => entry.universal)) {
+    const { version } = await Bun.file(join(REPO_ROOT, "package.json")).json();
+    const directory = join(REPO_ROOT, "build", "darwin-universal");
+    await run([
+      "ditto",
+      "-c",
+      "-k",
+      "--sequesterRsrc",
+      "--keepParent",
+      join(directory, "Siu.app"),
+      join(directory, `siu-gui_${version}_macos_universal.zip`),
+    ]);
+  }
 }
 
 if (import.meta.main)

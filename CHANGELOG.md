@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.6
+
+- Improved resource management with sticky matrix headers and resource names, one shared Agent header for grouped Skills, clearer filtering and details that follow the visible results.
+- Added an accessible detail drawer for compact windows, kept primary actions available on narrow screens, and improved typography, spacing and settings navigation.
+- Streamlined discovery around search and results, with loading skeletons and clearer category states.
+- Added official Agent icons with theme-aware colors across navigation, allocation matrices and detail panels.
+- Automated macOS Universal ZIP packaging and included it in release validation and SHA-256 checksums.
+
 ## 0.0.5
 
 - Updated desktop integration to MyGO 0.8.3, with generated typed bindings for backend requests, native file dialogs, theme changes and external links.
