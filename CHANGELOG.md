@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.5
+
+- Updated desktop integration to MyGO 0.8.3, with generated typed bindings for backend requests, native file dialogs, theme changes and external links.
+- Refreshed bundled frontend, Rust and Go dependencies and their license notices.
+- Added a macOS Universal ZIP for Apple Silicon and Intel Macs alongside platform installers and SHA-256 checksums.
+
 ## 0.0.4
 
 - Export the managed setup as one portable JSON file containing MCP definitions and credentials, embedded Skills files and executable flags, enabled states, Agent assignments, proxy settings and the desktop theme.
