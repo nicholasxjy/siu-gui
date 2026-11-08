@@ -39,6 +39,17 @@ import {
 } from "lucide-react";
 import type { Agent, Kind } from "./types";
 import brandIcon from "../resources/icon.svg?url";
+import claudeIcon from "../resources/agents/claude.svg?url";
+import claudeCodeIcon from "../resources/agents/claudecode.svg?url";
+import codexIcon from "../resources/agents/codex.svg?url";
+import geminiIcon from "../resources/agents/gemini.svg?url";
+import cursorIcon from "../resources/agents/cursor.svg?url";
+import piIcon from "../resources/agents/pi.svg?url";
+import opencodeIcon from "../resources/agents/opencode.svg?url";
+import copilotIcon from "../resources/agents/copilot.svg?url";
+import droidIcon from "../resources/agents/droid.svg?url";
+import grokIcon from "../resources/agents/grok.svg?url";
+import antigravityIcon from "../resources/agents/antigravity.svg?url";
 const icons = {
   plug: Plug2,
   skill: Sparkles,
@@ -103,24 +114,30 @@ export function Brand() {
     </span>
   );
 }
-const letters: Record<string, string> = {
-  claude: "✳",
-  codex: "⌘",
-  gemini: "✦",
-  cursor: "◩",
-  pi: "π",
-  opencode: "o",
-  copilot: "◉",
-  droid: "d",
-  grok: "g",
-  antigravity: "A",
-  "claude-desktop": "✳",
-  agents: "↗",
+const agentIcons: Record<string, string> = {
+  claude: claudeCodeIcon,
+  "claude-desktop": claudeIcon,
+  codex: codexIcon,
+  gemini: geminiIcon,
+  cursor: cursorIcon,
+  pi: piIcon,
+  opencode: opencodeIcon,
+  copilot: copilotIcon,
+  droid: droidIcon,
+  grok: grokIcon,
+  antigravity: antigravityIcon,
 };
 export function Avatar({ agent }: { agent: Pick<Agent, "id" | "name"> }) {
+  const logo = agentIcons[agent.id];
   return (
     <span className={"avatar " + agent.id} aria-hidden="true">
-      {letters[agent.id] || agent.name.slice(0, 1)}
+      {logo ? (
+        <img src={logo} alt="" draggable={false} />
+      ) : agent.id === "agents" ? (
+        <Icon name="folder" />
+      ) : (
+        agent.name.slice(0, 1)
+      )}
     </span>
   );
 }

@@ -57,42 +57,6 @@ button:disabled {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.avatar {
-  background: var(--hover);
-  color: var(--secondary);
-}
-.avatar.gemini {
-  background: #e3edf9;
-  color: #4f75b1;
-}
-.avatar.opencode {
-  background: #ececf0;
-  color: #575764;
-}
-.avatar.copilot {
-  background: #e6ecf2;
-  color: #4c647c;
-}
-.avatar.droid {
-  background: #f3e6df;
-  color: #af6649;
-}
-.avatar.grok {
-  background: #e6e8ed;
-  color: #303849;
-}
-.avatar.antigravity {
-  background: #e4edf6;
-  color: #436e9b;
-}
-.avatar.claude-desktop {
-  background: #f3e6de;
-  color: #a75a38;
-}
-.avatar.agents {
-  background: var(--hover);
-  color: var(--secondary);
-}
 .saved {
   min-width: 0;
 }

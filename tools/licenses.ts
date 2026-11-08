@@ -83,6 +83,11 @@ async function npm(name: string, from: string) {
     await npm(dep, dirname(file));
 }
 const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+await license(
+  "Agent icon notices",
+  "LobeHub ea434b96e75813517b377825e01c0df61dee8836; Pi pi.dev",
+  join(root, "resources", "agents"),
+);
 await license("siu-gui", pkg.version, root, "MIT");
 await license(
   "siu upstream",

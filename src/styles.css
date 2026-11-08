@@ -302,30 +302,64 @@ input {
   font-size: 12px;
   font-weight: 650;
   font-family: var(--font);
-}
-.avatar.claude {
-  background: #f3e6de;
-  color: #a75a38;
-}
-.avatar.codex {
-  background: #e5e9e9;
-  color: #283b3a;
-}
-.avatar.cursor {
-  background: #e7e9ee;
-  color: #42495b;
-}
-.avatar.pi {
-  background: #e9e3f6;
-  color: #7556a8;
-}
-.avatar.shared {
-  background: var(--hover);
+  background: var(--agent-bg, var(--hover));
   color: var(--secondary);
 }
+.avatar img,
 .avatar svg {
-  width: 15px;
-  height: 15px;
+  display: block;
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
+.avatar img {
+  filter: var(--agent-icon-filter, none);
+}
+.avatar.claude,
+.avatar.claude-desktop {
+  --agent-bg: #f9eee8;
+}
+.avatar.codex {
+  --agent-bg: #edf0ff;
+}
+.avatar.gemini,
+.avatar.antigravity {
+  --agent-bg: #eaf1fe;
+}
+.avatar.copilot {
+  --agent-bg: #efeafa;
+}
+.avatar.droid {
+  --agent-bg: #fff0e5;
+}
+.avatar.pi {
+  --agent-bg: #edf4f7;
+}
+[data-theme="dark"] .avatar.claude,
+[data-theme="dark"] .avatar.claude-desktop {
+  --agent-bg: #40302d;
+}
+[data-theme="dark"] .avatar.codex {
+  --agent-bg: #303451;
+}
+[data-theme="dark"] .avatar.gemini,
+[data-theme="dark"] .avatar.antigravity {
+  --agent-bg: #29364d;
+}
+[data-theme="dark"] .avatar.copilot {
+  --agent-bg: #363047;
+}
+[data-theme="dark"] .avatar.pi {
+  --agent-bg: #2d3a43;
+}
+[data-theme="dark"] .avatar.droid {
+  --agent-bg: #433126;
+}
+[data-theme="dark"] .avatar.cursor,
+[data-theme="dark"] .avatar.opencode,
+[data-theme="dark"] .avatar.copilot,
+[data-theme="dark"] .avatar.grok {
+  --agent-icon-filter: brightness(0) invert(1);
 }
 .agent-dot {
   width: 5px;
@@ -586,10 +620,6 @@ textarea::placeholder {
   font-size: 10px;
   border-radius: 5px;
   margin-bottom: 4px;
-}
-.matrix th .avatar svg {
-  width: 12px;
-  height: 12px;
 }
 .matrix th span.agent-label {
   display: block;
