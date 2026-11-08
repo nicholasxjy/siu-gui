@@ -157,7 +157,7 @@ export function ProxySettingsForm({
   };
 
   return (
-    <section className="settings-section">
+    <section className="settings-section" id="settings-network">
       <h2>网络</h2>
       {loading && (
         <div className="inline-loading">

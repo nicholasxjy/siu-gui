@@ -82,7 +82,11 @@ export function ConfigTransfer({
   };
 
   return (
-    <section className="settings-section" aria-busy={working}>
+    <section
+      className="settings-section"
+      id="settings-transfer"
+      aria-busy={working}
+    >
       <h2>配置迁移</h2>
       <div className="setting-row">
         <div>

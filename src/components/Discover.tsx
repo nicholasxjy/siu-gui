@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "../api";
 import type { DialogState, Discovery, Kind, Snapshot } from "../types";
-import { Avatar, Brand, Icon, ToolIcon } from "../icons";
+import { Icon, ToolIcon } from "../icons";
 import { Note } from "./Modal";
 interface Props {
   snapshot: Snapshot;
@@ -57,10 +57,7 @@ export function Discover({ snapshot, onDialog, onOpen, busy }: Props) {
     setDebounced("");
     setRevision(0);
   };
-  const detected = snapshot.agents
-      .filter((a) => a.detected && a.id !== "agents")
-      .slice(0, 4),
-    count = kind === "mcp" ? data?.servers.length : data?.skills.length;
+  const count = kind === "mcp" ? data?.servers.length : data?.skills.length;
   return (
     <>
       <header className="page-head">
@@ -129,38 +126,12 @@ export function Discover({ snapshot, onDialog, onOpen, busy }: Props) {
             <Icon name={loading ? "spinner" : "refresh"} />
           </button>
         </div>
-        {!query ? (
-          <div className="discover-intro">
-            <div>
-              <h2>好用的能力，放在一起。</h2>
-              <p>
-                发现、安装，再分配给你常用的 Agent。
-                <br />
-                已有的工具和配置，也可以一起管理。
-              </p>
-            </div>
-            <div className="connection-art" aria-hidden="true">
-              <ToolIcon
-                name={kind === "mcp" ? "context7" : "skill"}
-                kind={kind}
-                large
-              />
-              <span className="connection-line" />
-              <Brand />
-              <span className="connection-line" />
-              <div className="connection-nodes">
-                {detected.map((a) => (
-                  <Avatar key={a.id} agent={a} />
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
         <div className="category-row">
           {categories.map((c) => (
             <button
               className={"category " + (query === c[kind] ? "active" : "")}
               key={c.label}
+              aria-pressed={query === c[kind]}
               onClick={() => setQuery(c[kind])}
             >
               {c.label}
@@ -183,12 +154,21 @@ export function Discover({ snapshot, onDialog, onOpen, busy }: Props) {
           </div>
         ) : null}
         {loading ? (
-          <div className="empty loading-state" role="status">
-            <Icon name="spinner" />
-            <h2>正在查找{kind === "mcp" ? "工具" : "技能"}</h2>
-            <p>
-              从{kind === "mcp" ? " MCP Registry" : " skills.sh"} 获取最新结果…
-            </p>
+          <div
+            role="status"
+            aria-label={"正在查找" + (kind === "mcp" ? "工具" : "技能")}
+          >
+            <span className="sr-only">正在获取最新结果…</span>
+            <div className="cards" aria-hidden="true">
+              {Array.from({ length: 6 }, (_, index) => (
+                <div className="market-card skeleton-card" key={index}>
+                  <div className="skeleton skeleton-title" />
+                  <div className="skeleton" />
+                  <div className="skeleton skeleton-short" />
+                  <div className="skeleton skeleton-action" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
           <div className="empty">

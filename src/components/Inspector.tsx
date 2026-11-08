@@ -14,7 +14,7 @@ import {
   stateLabel,
 } from "../utils";
 import { Avatar, Icon, ToolIcon } from "../icons";
-import { Note } from "./Modal";
+import { Modal, Note } from "./Modal";
 interface Props {
   entry: Resource;
   kind: Kind;
@@ -39,6 +39,16 @@ export function Inspector({
   busy,
   notify,
 }: Props) {
+  const [compact, setCompact] = useState(
+    () => matchMedia("(max-width: 1180px)").matches,
+  );
+  useEffect(() => {
+    const media = matchMedia("(max-width: 1180px)");
+    const update = () => setCompact(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const [tab, setTab] = useState("overview"),
     [content, setContent] = useState<{ content: string; path: string } | null>(
       null,
@@ -78,23 +88,13 @@ export function Inspector({
     failures = Object.values(entry.states).filter((x) => x === "error").length;
   const openPath = (path: string) =>
     void api.openPath(path).catch((e) => notify(errorMessage(e)));
-  return (
-    <aside
-      className={"inspector" + (open ? " open" : "")}
-      aria-label="资源详情"
-    >
+  const panel = (
+    <aside className="inspector" aria-label="资源详情">
       <div className="inspector-content">
         <div className="inspector-top">
           <div className="inspector-heading">
             <ToolIcon name={entry.name} kind={kind} large />
             <div className="actions">
-              <button
-                className="icon-button close-inspector"
-                onClick={onClose}
-                aria-label="关闭详情"
-              >
-                <Icon name="close" />
-              </button>
               <button
                 className="icon-button"
                 disabled={Boolean(busy)}
@@ -404,5 +404,14 @@ export function Inspector({
         </button>
       </div>
     </aside>
+  );
+  return compact ? (
+    open ? (
+      <Modal title="资源详情" onClose={onClose} busy={Boolean(busy)} side>
+        {panel}
+      </Modal>
+    ) : null
+  ) : (
+    panel
   );
 }

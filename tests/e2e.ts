@@ -806,6 +806,30 @@ try {
     await browser("screenshot", join(artifacts, "06-mcp-small.png"));
     await browser("set", "viewport", "1440", "900");
   });
+  await check(
+    "窄屏保留主要操作，横向滚动后分配按钮不被固定名称列遮挡",
+    async () => {
+      for (const width of [320, 390]) {
+        await browser("set", "viewport", String(width), "844");
+        const layout = await js(`(() => {
+        const list = document.querySelector('.list-scroll');
+        list.scrollLeft = list.scrollWidth;
+        const resource = document.querySelector('.matrix tbody tr td:first-child').getBoundingClientRect();
+        const allocation = document.querySelector('.matrix tbody tr td:last-child button').getBoundingClientRect();
+        const actions = [...document.querySelectorAll('.page-head .btn')];
+        return [
+          document.documentElement.scrollWidth <= innerWidth,
+          allocation.left >= resource.right,
+          allocation.right <= list.getBoundingClientRect().right,
+          actions.length === 2 && actions.every(button => button.getBoundingClientRect().width > 0)
+        ];
+      })()`);
+        assert.ok(!layout.includes("false"), String(width) + "px: " + layout);
+        await browser("screenshot", join(artifacts, `07-mcp-${width}.png`));
+      }
+      await browser("set", "viewport", "1440", "900");
+    },
+  );
   await check("当前页面无已确认的 axe 无障碍违规", async () => {
     const raw = JSON.parse(await browser("a11y", "--json"));
     await Bun.write(join(artifacts, "a11y.json"), JSON.stringify(raw, null, 2));

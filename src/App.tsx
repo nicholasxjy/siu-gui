@@ -164,10 +164,11 @@ function Application() {
   }, [dialog, busy, navigate, app.refresh]);
   const nav = (id: Page, glyph: IconName, label: string, count?: number) => (
     <button
-      className={"nav-button " + (page === id && !agentFilter ? "active" : "")}
+      className={"nav-button " + (page === id ? "active" : "")}
       onClick={() => navigate(id)}
       title={label}
-      aria-current={page === id && !agentFilter ? "page" : undefined}
+      aria-label={label}
+      aria-current={page === id ? "page" : undefined}
     >
       <Icon name={glyph} />
       <span className="nav-text">{label}</span>
@@ -200,8 +201,9 @@ function Application() {
             {nav("skills", "skill", "Skills", snapshot?.skills.length)}
             <div className="nav-separator" />
             {nav("discover", "compass", "发现")}
+            {nav("agents", "monitor", "本机 Agent")}
             <div className="agents-heading">
-              <span>本机 Agent</span>
+              <span>按 Agent 筛选</span>
               <div className="actions">
                 <button
                   className="tiny-button"
@@ -232,6 +234,8 @@ function Application() {
                       (agentFilter === a.id ? "active" : "")
                     }
                     onClick={() => agentClick(a.id)}
+                    aria-label={"筛选 " + a.name + " 的资源"}
+                    aria-pressed={agentFilter === a.id}
                     title={"查看分配给 " + a.name + " 的资源"}
                   >
                     <Avatar agent={a} />
@@ -271,6 +275,7 @@ function Application() {
                 className="nav-button"
                 onClick={() => setDialog({ type: "shortcuts" })}
                 title="快捷键"
+                aria-label="快捷键"
               >
                 <Icon name="terminal" />
                 <span className="nav-text">快捷键</span>
@@ -322,6 +327,10 @@ function Application() {
                     snapshot={snapshot}
                     kind={page}
                     agentFilter={agentFilter}
+                    onClearAgent={() => {
+                      setAgentFilter("");
+                      setSelected("");
+                    }}
                     selected={selected}
                     onSelect={setSelected}
                     onDialog={setDialog}

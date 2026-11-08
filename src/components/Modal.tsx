@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "../icons";
 export function Modal({
   title,
@@ -7,6 +8,7 @@ export function Modal({
   onClose,
   busy = false,
   large = false,
+  side = false,
   children,
   footer,
 }: {
@@ -15,6 +17,7 @@ export function Modal({
   onClose: () => void;
   busy?: boolean;
   large?: boolean;
+  side?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -62,9 +65,9 @@ export function Modal({
     document.addEventListener("keydown", key, true);
     return () => document.removeEventListener("keydown", key, true);
   }, [busy, onClose]);
-  return (
+  return createPortal(
     <div
-      className="overlay"
+      className={"overlay" + (side ? " inspector-overlay" : "")}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
@@ -75,7 +78,11 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={id}
         tabIndex={-1}
-        className={"modal" + (large ? " large-modal" : "")}
+        className={
+          "modal" +
+          (large ? " large-modal" : "") +
+          (side ? " inspector-modal" : "")
+        }
       >
         <div className="modal-head">
           <div>
@@ -94,7 +101,8 @@ export function Modal({
         <div className="modal-body">{children}</div>
         {footer ? <div className="modal-footer">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 export function Note({

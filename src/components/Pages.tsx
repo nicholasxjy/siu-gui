@@ -209,7 +209,15 @@ export function SettingsPage({
       </header>
       <div className="page-scroll">
         <div className="settings">
-          <section className="settings-section">
+          <nav className="settings-links" aria-label="设置分类">
+            <a href="#settings-appearance">外观</a>
+            <a href="#settings-network">网络</a>
+            <a href="#settings-transfer">配置迁移</a>
+            <a href="#settings-data">本机数据</a>
+            <a href="#settings-resources">资源管理</a>
+            <a href="#settings-about">关于</a>
+          </nav>
+          <section className="settings-section" id="settings-appearance">
             <h2>外观</h2>
             <div className="setting-row">
               <div>
@@ -258,7 +266,7 @@ export function SettingsPage({
             mutate={mutate}
             onDone={restored}
           />
-          <section className="settings-section">
+          <section className="settings-section" id="settings-data">
             <h2>本机数据</h2>
             <div className="setting-row">
               <div>
@@ -296,7 +304,7 @@ export function SettingsPage({
               </Note>
             </div>
           </section>
-          <section className="settings-section">
+          <section className="settings-section" id="settings-resources">
             <h2>资源管理</h2>
             {(
               [
@@ -320,7 +328,7 @@ export function SettingsPage({
               </div>
             ))}
           </section>
-          <section className="settings-section">
+          <section className="settings-section" id="settings-about">
             <h2>关于</h2>
             <div className="setting-row">
               <div>
