@@ -1,5 +1,5 @@
 // Command testhost is a development/test-only loopback HTTP server that
-// lets browser-driven E2E tests exercise the real siu-core backend
+// lets browser-driven E2E tests exercise the real Go core service
 // without a mygo native window (see docs/protocol.md's closing note).
 // vite.config.ts proxies /__test/* here when SIU_GUI_BROWSER_TEST=1, for
 // the Vite dev server at http://127.0.0.1:5173 only.
@@ -33,7 +33,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nicholasxjy/siu-gui/internal/backend"
+	"github.com/nicholasxjy/siu-gui/internal/core"
 )
 
 // listenAddr is fixed, not configurable: docs/protocol.md and
@@ -82,11 +82,11 @@ func main() {
 	}
 	log.Printf("testhost: SIU_GUI_TEST_HOME=%s", testHome)
 
-	client := backend.New()
-	defer client.Close()
+	svc := core.NewService("dev")
+	defer svc.Close()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/__test/request", withOrigin(requireMethod(http.MethodPost, handleRequest(client))))
+	mux.HandleFunc("/__test/request", withOrigin(requireMethod(http.MethodPost, handleRequest(svc))))
 	mux.HandleFunc("/__test/info", withOrigin(requireMethod(http.MethodGet, handleInfo)))
 	mux.HandleFunc("/__test/pick-directory", withOrigin(handleUnsupported("PickDirectory: testhost has no native UI to show a directory picker")))
 	mux.HandleFunc("/__test/open-path", withOrigin(requireMethod(http.MethodPost, handleUnsupported("OpenPath: testhost never touches the OS"))))
@@ -118,11 +118,7 @@ func main() {
 }
 
 // validatedTestHome reads and validates SIU_GUI_TEST_HOME: it must be
-// set, absolute, and must not resolve to the real home directory. siu-core
-// itself (core/src/env.rs) also reads this variable directly from the
-// process environment and roots everything under it when set; testhost
-// only has to make sure it is actually set, correct, and passed through
-// (which backend.Client does automatically via os.Environ()).
+// set, absolute, and must not resolve to the real home directory.
 func validatedTestHome() (string, error) {
 	raw := os.Getenv("SIU_GUI_TEST_HOME")
 	if raw == "" {
@@ -145,9 +141,6 @@ func validatedTestHome() (string, error) {
 	return testHome, nil
 }
 
-// samePath compares two paths for pointing at the same directory,
-// resolving symlinks when possible so an aliased path to the real home
-// cannot slip past validatedTestHome's check.
 func samePath(a, b string) bool {
 	if a == b {
 		return true
@@ -157,12 +150,6 @@ func samePath(a, b string) bool {
 	return errA == nil && errB == nil && ra == rb
 }
 
-// withOrigin rejects any request whose Origin is not the Vite dev server
-// this harness exists for. A GET may omit Origin (browsers do not always
-// send it for simple same-origin GETs, and the only GET route here,
-// /__test/info, is read-only); any other method without an Origin header
-// is refused, since real browsers always send Origin for non-GET fetches
-// -- its absence means the caller is not going through the Vite proxy.
 func withOrigin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -189,13 +176,11 @@ func requireMethod(method string, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// requestHead is only used to pick a timeout tier; the full payload is
-// forwarded to siu-core unparsed, exactly as Desktop.Request does.
 type requestHead struct {
 	Method string `json:"method"`
 }
 
-func handleRequest(client *backend.Client) http.HandlerFunc {
+func handleRequest(svc *core.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 		body, err := io.ReadAll(r.Body)
@@ -205,16 +190,14 @@ func handleRequest(client *backend.Client) http.HandlerFunc {
 		}
 
 		var head requestHead
-		_ = json.Unmarshal(body, &head) // best-effort; the backend itself rejects a malformed payload
+		_ = json.Unmarshal(body, &head)
 
 		ctx, cancel := context.WithTimeout(r.Context(), requestTimeout(head.Method))
 		defer cancel()
 
-		data, err := client.Request(ctx, string(body))
+		data, err := svc.Request(ctx, string(body))
 		if err != nil {
-			// Log only the method name: the payload and the core's
-			// response can carry MCP server secrets (env values,
-			// headers, tokens), which must never land in a log file.
+			// Log only the method name: payloads and responses may carry secrets.
 			log.Printf("testhost: request method=%q failed: %v", head.Method, err)
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return

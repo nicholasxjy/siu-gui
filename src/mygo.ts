@@ -15,11 +15,9 @@ export interface Info {
 
 /**
  * Desktop is bound under the name "Desktop" (see mygo.BindAs in main.go).
- * The zero value has no backend client yet; main installs one with
- * setClient from App.WhenReady, once the app (and so dialogs and the
- * window controls CallerWindow resolves) is actually usable. Calls that
- * reach Desktop before that point reflect a frontend bug, not a user
- * action, since the window itself cannot exist yet either.
+ * The zero value has no core service yet; main installs one with setCore
+ * from App.WhenReady, once the app (and so dialogs and the window controls
+ * CallerWindow resolves) is actually usable.
  */
 export const Desktop = {
   /** Info returns the host OS, architecture and app version. */
@@ -47,15 +45,10 @@ export const Desktop = {
    */
   pickDirectory: bind<[], string>("Desktop.PickDirectory", () => []),
   /**
-   * Request forwards payload -- the core protocol's {method,params}
-   * envelope -- to siu-core and returns its raw JSON response verbatim; the
-   * frontend parses the {ok,data|error} shape itself (see
-   * docs/protocol.md). The only errors Request itself produces are
-   * transport-level: no backend yet, or the request timed out. A timeout
-   * here means the outcome is unknown, not that it failed or was rolled
-   * back: backend.Client's error message says so explicitly, and the
-   * frontend must refresh (snapshot) to find the actual state rather than
-   * assume the mutation did or did not apply.
+   * Request dispatches payload -- the core protocol's {method,params}
+   * envelope -- to the in-process Go core service and returns its raw JSON
+   * response; the frontend parses the {ok,data|error} shape itself (see
+   * docs/protocol.md).
    */
   request: bind<[string], string>("Desktop.Request", (payload: string) => [payload]),
   /**

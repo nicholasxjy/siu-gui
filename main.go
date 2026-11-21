@@ -11,7 +11,7 @@ import (
 
 	"github.com/egoist/mygo"
 
-	"github.com/nicholasxjy/siu-gui/internal/backend"
+	"github.com/nicholasxjy/siu-gui/internal/core"
 )
 
 // mainWindowState guards the single window siu-gui shows: openMainWindow
@@ -32,7 +32,7 @@ func main() {
 		// `mygo generate` (and `mygo dev`/`mygo build` writing the client
 		// before their own build) run main with MYGO_GENERATE set so that
 		// App.Run only writes the TypeScript client and returns: no
-		// window, no single-instance lock, no siu-core process. Bind
+		// window, no single-instance lock, no core initialization. Bind
 		// above is enough for that; nothing else below may run.
 		if err := mygo.App.Run(); err != nil {
 			log.Fatal(err)
@@ -48,8 +48,7 @@ func main() {
 	})
 
 	mygo.App.WhenReady(func() {
-		resourcesDir, _ := mygo.App.Path(mygo.PathResources)
-		desktop.setClient(backend.NewWithExecutable(resolveCoreExecutablePath(resourcesDir)))
+		desktop.setCore(core.NewService(mygo.App.Version()))
 
 		setupMenu()
 		openMainWindow()
@@ -68,7 +67,7 @@ func main() {
 	}
 
 	mygo.App.OnQuit(func() {
-		desktop.closeClient()
+		desktop.closeCore()
 	})
 
 	if err := mygo.App.Run(); err != nil {

@@ -1,12 +1,11 @@
 // Opt-in network integration checks. All Agent/library changes stay in a temporary home.
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createInterface } from "node:readline";
-import { HOST, REPO_ROOT, resourceBinPath } from "../scripts/core";
+import { REPO_ROOT } from "../scripts/build";
 import type {
   Discovery,
   MutationResult,
@@ -16,9 +15,21 @@ import type {
 
 const home = await mkdtemp(join(tmpdir(), "siu-gui-online-"));
 await mkdir(join(home, ".claude"), { recursive: true });
-const core = process.env.SIU_GUI_CORE || resourceBinPath(HOST);
+const hostBin = join(
+  home,
+  process.platform === "win32" ? "testhost.exe" : "testhost",
+);
+const buildRes = spawnSync("go", ["build", "-o", hostBin, "./cmd/testhost"], {
+  cwd: REPO_ROOT,
+  stdio: "inherit",
+});
+if (buildRes.status !== 0) {
+  throw new Error("failed to build cmd/testhost");
+}
+
 const checks: { name: string; ok: boolean; error?: string }[] = [];
-function start(offline = false) {
+
+async function start(offline = false) {
   const proxyEnv = { ...process.env };
   if (process.env.SIU_TEST_SYSTEM_PROXY_ONLY === "1") {
     for (const key of ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]) {
@@ -32,78 +43,53 @@ function start(offline = false) {
     }
     proxyEnv.NO_PROXY = proxyEnv.no_proxy = "";
   }
-  const child = spawn(core, [], {
+  const child = spawn(hostBin, [], {
     cwd: REPO_ROOT,
     env: {
       ...proxyEnv,
       SIU_GUI_TEST_HOME: home,
-      SIU_GUI_ROOT: join(home, ".siu"),
     },
     stdio: "pipe",
   });
-  let next = 0;
-  const pending = new Map<
-    number,
-    {
-      resolve: (data: unknown) => void;
-      reject: (error: Error) => void;
-      timer: ReturnType<typeof setTimeout>;
-    }
-  >();
-  createInterface({ input: child.stdout }).on("line", (line) => {
-    const message = JSON.parse(line) as {
-      id: number;
-      ok: boolean;
-      data: unknown;
-      error?: string;
-    };
-    const request = pending.get(message.id);
-    if (!request) return;
-    pending.delete(message.id);
-    clearTimeout(request.timer);
-    if (message.ok) request.resolve(message.data);
-    else request.reject(new Error(message.error || "Core request failed"));
-  });
-  child.on("error", (error) => {
-    for (const request of pending.values()) {
-      clearTimeout(request.timer);
-      request.reject(error);
-    }
-    pending.clear();
-  });
-  child.on("exit", () => {
-    for (const request of pending.values()) {
-      clearTimeout(request.timer);
-      request.reject(new Error("Core exited"));
-    }
-    pending.clear();
-  });
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch("http://127.0.0.1:47832/__test/info");
+      if (r.ok) break;
+    } catch {}
+    await Bun.sleep(100);
+  }
   return {
-    request: <T>(method: string, params: object = {}) =>
-      new Promise<T>((resolve, reject) => {
-        const id = ++next;
-        const timer = setTimeout(() => {
-          pending.delete(id);
-          reject(new Error(method + " timed out"));
-        }, 180000);
-        pending.set(id, {
-          resolve: (value) => resolve(value as T),
-          reject,
-          timer,
-        });
-        child.stdin.write(JSON.stringify({ id, method, params }) + "\n");
-      }),
+    request: async <T>(method: string, params: object = {}): Promise<T> => {
+      const res = await fetch("http://127.0.0.1:47832/__test/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "http://127.0.0.1:5173",
+        },
+        body: JSON.stringify({ method, params }),
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status + ": " + (await res.text()));
+      const message = (await res.json()) as {
+        ok: boolean;
+        data: T;
+        error?: string;
+      };
+      if (!message.ok) throw new Error(message.error || "Core request failed");
+      return message.data;
+    },
     close: async () => {
       if (child.exitCode !== null) return;
       const exit = once(child, "exit");
-      child.stdin.end();
+      child.kill("SIGTERM");
       const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
       await exit;
       clearTimeout(timer);
     },
   };
 }
-let session = start();
+
+let session = await start();
 async function check(name: string, action: () => Promise<void>) {
   try {
     await action();
@@ -147,7 +133,7 @@ try {
     "Registry descriptors persist and install after an offline restart",
     async () => {
       await session.close();
-      session = start(true);
+      session = await start(true);
       const cached = await session.request<Discovery>("discover", {
         kind: "mcp",
         query: "context7",
@@ -185,7 +171,7 @@ try {
         name: "offline-registry",
       });
       await session.close();
-      session = start();
+      session = await start();
     },
   );
   await check("skills.sh returns searchable live Skills", async () => {

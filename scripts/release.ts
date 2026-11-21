@@ -1,7 +1,6 @@
 import { copyFile, mkdir, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { parseArgs, parsePlatformEntry } from "./build";
-import { REPO_ROOT } from "./core";
+import { REPO_ROOT, parseArgs, parsePlatformEntry } from "./build";
 
 export async function stageReleaseArtifacts(options: {
   platform: string;

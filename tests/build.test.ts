@@ -1,29 +1,23 @@
 import { describe, expect, it } from "bun:test";
-import {
-  coreTargetsFor,
-  parseArgs,
-  parsePlatformEntry,
-} from "../scripts/build";
-import { HOST, parseCoreArgs, resourceBinPath } from "../scripts/core";
+import { parseArgs, parsePlatformEntry } from "../scripts/build";
 
 describe("desktop build targets", () => {
   for (const os of ["darwin", "windows", "linux"] as const)
     for (const arch of ["amd64", "arm64"] as const)
       it("resolves " + os + "/" + arch, () => {
-        const entry = parsePlatformEntry(os + "/" + arch);
-        expect(coreTargetsFor(entry)).toEqual([{ goos: os, goarch: arch }]);
-        expect(
-          resourceBinPath({
-            goos: os as "darwin" | "windows" | "linux",
-            goarch: arch as "amd64" | "arm64",
-          }),
-        ).toContain(os + "-" + arch);
+        expect(parsePlatformEntry(os + "/" + arch)).toEqual({
+          raw: os + "/" + arch,
+          goos: os,
+          universal: false,
+          goarch: arch,
+        });
       });
-  it("builds both core architectures for a universal macOS app", () => {
-    expect(coreTargetsFor(parsePlatformEntry("darwin/universal"))).toEqual([
-      { goos: "darwin", goarch: "arm64" },
-      { goos: "darwin", goarch: "amd64" },
-    ]);
+  it("resolves darwin/universal", () => {
+    expect(parsePlatformEntry("darwin/universal")).toEqual({
+      raw: "darwin/universal",
+      goos: "darwin",
+      universal: true,
+    });
   });
   for (const target of [
     "darwin/x64",
@@ -50,15 +44,5 @@ describe("desktop build targets", () => {
       ["--platform", "-debug"],
     ])
       expect(() => parseArgs(args)).toThrow();
-  });
-  it("validates explicit core targets and defaults to the host", () => {
-    expect(parseCoreArgs([])).toEqual(HOST);
-    expect(parseCoreArgs(["--os=windows", "--arch=arm64"])).toEqual({
-      goos: "windows",
-      goarch: "arm64",
-    });
-    expect(() => parseCoreArgs(["--os=ios"])).toThrow();
-    expect(() => parseCoreArgs(["--arch=x64"])).toThrow();
-    expect(() => parseCoreArgs(["--unknown=value"])).toThrow();
   });
 });
