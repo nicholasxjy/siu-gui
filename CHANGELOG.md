@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7
+
+- Added a resource library page for managing user-level Agent instruction files such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. View each file’s path and status, create or edit its Markdown, and confirm the path before deleting it. Saving preserves your draft if the file changed on disk. (#4)
+- Redesigned the MCP and Skills workspace with quick status filters, easier access to unmanaged resources, and Agent assignments in the inspector. Updated discovery, Agents, and settings to match. (#3)
+- Switched the desktop app to an in-process Go core and MyGO 0.10.0, removing the separate Rust executable from desktop packages. (#3)
+
 ## 0.0.6
 
 - Improved resource management with sticky matrix headers and resource names, one shared Agent header for grouped Skills, clearer filtering and details that follow the visible results.

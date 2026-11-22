@@ -28,7 +28,7 @@ type Service struct {
 // NewService constructs a core Service reporting version in Snapshot.version.
 func NewService(version string) *Service {
 	if version == "" {
-		version = "0.0.6"
+		version = "0.0.7"
 	}
 	return &Service{
 		scans:   NewScanManager(),
