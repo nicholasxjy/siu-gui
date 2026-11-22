@@ -6,12 +6,11 @@
 bun run typecheck
 bun run test
 bun run test:build
-cargo test --locked --manifest-path core/Cargo.toml
 go test -race ./...
 bun run build:web
 ```
 
-依次检查 TypeScript、前端、构建与发布脚本、Rust 单元与 NDJSON 协议、Go 竞态和生产前端构建。Windows ARM64 使用 `go test ./...`。
+依次检查 TypeScript、前端、构建与发布脚本、Go 核心与桌面测试（含竞态）和生产前端构建。Windows ARM64 使用 `go test ./...`。
 
 ## 隔离路径
 
@@ -21,24 +20,19 @@ E2E 和联网测试脚本均自动创建临时隔离目录。手动测试配置�
 SIU_GUI_TEST_HOME="$(mktemp -d)" ./build/darwin-universal/Siu.app/Contents/MacOS/Siu
 ```
 
-`SIU_GUI_CORE` 可显式指定核心路径，供开发或测试覆盖。Rust 单元测试使用等价的 `Env::rooted(tempdir)`。
+Go 单元测试使用等价的 `EnvRooted(tempdir)`。
 
 ## E2E 运行前提
 
 ```sh
 bun install --frozen-lockfile
-bun run prepare:core
 bunx agent-browser install
 bun run test:e2e
 ```
 
 E2E 脚本构建测试服务（`cmd/testhost`），绑定 `127.0.0.1:47832`；以 `SIU_GUI_BROWSER_TEST=1` 启动 Vite（`127.0.0.1:5173`），完成后关闭服务和浏览器。可通过 `AGENT_BROWSER_BIN` 替换浏览器 CLI。
 
-`bun run test:online` 需要外网。Rust 联网探针（`online_mcp_package_versions`）默认忽略，单独运行：
-
-```sh
-cargo test --locked --manifest-path core/Cargo.toml online_mcp_package_versions -- --ignored
-```
+`bun run test:online` 需要外网。
 
 ## macOS 原生验证命令
 
@@ -46,7 +40,6 @@ cargo test --locked --manifest-path core/Cargo.toml online_mcp_package_versions 
 codesign --verify --deep --strict <path>/Siu.app
 hdiutil verify <path>/Siu.dmg
 lipo -archs <path>/Siu.app/Contents/MacOS/Siu
-lipo -archs <path>/Siu.app/Contents/Resources/bin/siu-core
 ```
 
 ## 已验证范围

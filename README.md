@@ -1,6 +1,6 @@
 # siu GUI
 
-[siu](https://github.com/nicholasxjy/siu) 的桌面界面，统一管理 coding agent 的 MCP 服务与 Skills。基于 [mygo](https://github.com/egoist/mygo)、React 和 siu Rust 核心，使用系统 WebView。
+[siu](https://github.com/nicholasxjy/siu) 的桌面界面，统一管理 coding agent 的 MCP 服务与 Skills。基于 [mygo](https://github.com/egoist/mygo)、React 和纯 Go 重写的 siu 核心，使用系统 WebView。
 
 [下载安装包](https://github.com/nicholasxjy/siu-gui/releases/latest) · [更新记录](CHANGELOG.md)
 
@@ -17,7 +17,7 @@ MCP 服务：通过「资源 × Agent」矩阵分配工具，查看配置与同�
 
 </details>
 
-截图使用隔离示例数据，由真实界面与 Go/Rust 后端运行生成。
+截图使用隔离示例数据，由真实界面与 Go 后端运行生成。
 
 ## 功能
 
@@ -55,12 +55,11 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-`dev` 会编译 Rust 核心并启动桌面窗口；单独运行 `dev:web` 无法访问本机配置。`bun run build` 的产物位于 `build/<os>-<arch>/`。
+`dev` 会启动 mygo 桌面窗口与 Vite 热更新；单独运行 `dev:web` 无法访问本机配置。`bun run build` 的产物位于 `build/<os>-<arch>/`。
 
 - [构建与分发](docs/building.md)：工具链、打包、签名与发布。
 - [验证指南](docs/verification.md)：测试命令、隔离环境与验证范围。
 - [接口协议](docs/protocol.md)：桌面 IPC、核心方法与数据结构。
-- [上游来源](core/UPSTREAM.md)：固定版本与桌面适配。
 
 ## 许可
 

@@ -217,7 +217,16 @@ export function Discover({ snapshot, onDialog, onOpen, busy }: Props) {
                           "查看来源与配置，确认是否适合你的 Agent。"}
                       </p>
                       <div className="card-bottom">
-                        <span className="pill">{item.server.transport}</span>
+                        <div className="card-tags">
+                          <span className="pill">
+                            {item.server.transport === "stdio"
+                              ? "stdio"
+                              : item.server.transport.toUpperCase()}
+                          </span>
+                          {item.featured ? (
+                            <span className="pill accent">推荐</span>
+                          ) : null}
+                        </div>
                         {installed ? (
                           <button
                             className="btn small ghost"
@@ -285,18 +294,30 @@ export function Discover({ snapshot, onDialog, onOpen, busy }: Props) {
                           <Icon name="external" />
                         </button>
                       </div>
-                      <p>
-                        从此仓库选择并安装所需
-                        Skill。安装前可查看具体说明与分配目标。
-                      </p>
+                      <div className="skill-card-meta">
+                        <div className="skill-meta-row">
+                          <Icon name="branch" />
+                          <code title={item.source + "/" + item.skillId}>
+                            {item.skillId}
+                          </code>
+                        </div>
+                        <div className="card-tags">
+                          {item.isOfficial ? (
+                            <span className="pill accent">官方来源</span>
+                          ) : null}
+                          {item.installs > 0 ? (
+                            <span className="pill">
+                              {new Intl.NumberFormat("zh-CN", {
+                                notation: "compact",
+                              }).format(item.installs)}{" "}
+                              次安装
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
                       <div className="card-bottom">
                         <span className="skill-installs">
-                          {item.installs > 0
-                            ? new Intl.NumberFormat("zh-CN", {
-                                notation: "compact",
-                              }).format(item.installs) + " 次安装"
-                            : "Skill"}
-                          {item.isOfficial ? " · 来源已标记官方" : ""}
+                          点击安装可预览仓库内容
                         </span>
                         {installed ? (
                           <button

@@ -3,11 +3,7 @@ dist/
 build/
 release-assets/
 .artifacts/
-core/target/
-internal/backend/bundle/siu-core.bin
-resources/darwin*/bin/
-resources/windows*/bin/
-resources/linux*/bin/
+.mygo/
 *.log
 .DS_Store
 .pi/

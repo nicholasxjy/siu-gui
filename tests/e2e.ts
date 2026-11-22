@@ -1,5 +1,5 @@
-// Runs the real Go/Rust service against a disposable home, then drives the UI.
-// Prerequisites: bun run prepare:core; agent-browser and its Chromium installed.
+// Runs the real Go service against a disposable home, then drives the UI.
+// Prerequisites: agent-browser and its Chromium installed.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -22,19 +22,9 @@ await mkdir(artifacts, { recursive: true });
 const session = "siu-gui-e2e-" + process.pid;
 const children: ChildProcess[] = [];
 const checks: string[] = [];
-const core = join(
-  root,
-  "resources",
-  (process.platform === "win32" ? "windows" : process.platform) +
-    "-" +
-    (process.arch === "x64" ? "amd64" : process.arch),
-  "bin",
-  process.platform === "win32" ? "siu-core.exe" : "siu-core",
-);
 const env = {
   ...process.env,
   SIU_GUI_TEST_HOME: home,
-  SIU_GUI_CORE: core,
   SIU_GUI_BROWSER_TEST: "1",
 };
 const browserBin = process.env.AGENT_BROWSER_BIN || "npx";
@@ -149,7 +139,6 @@ async function pauseOrResume(name: string, enabled: boolean) {
   }, "enable state " + name);
 }
 try {
-  await stat(core);
   for (const dir of [".claude", ".codex", ".cursor/skills/unmanaged-skill"])
     await mkdir(join(home, dir), { recursive: true });
   const originalClaude = JSON.stringify(

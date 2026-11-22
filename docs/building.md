@@ -2,17 +2,17 @@
 
 ## 工具链依赖
 
-- Go 1.27.3+、Bun 1.4.4+、Node.js 26+（也支持 24.15+ 的 24.x）、Rust 稳定版、Git。
+- Go 1.27.3+、Bun 1.4.4+、Node.js 26+（也支持 24.15+ 的 24.x）、Git。
 - macOS：Xcode Command Line Tools（`hdiutil` 生成 DMG，`codesign` 签名）。
-- Windows：Rust MSVC 工具链与 Visual Studio C++ Build Tools；mygo 按需下载 NSIS 生成安装器。
+- Windows：mygo 按需下载 NSIS 生成安装器。
 - Linux：GTK 3 与 WebKitGTK（`libgtk-3-0 libwebkit2gtk-4.1-0`）；中文字体可安装 `fonts-noto-cjk`。
 
 ## 开发与构建
 
 ```sh
 bun install --frozen-lockfile
-bun run dev      # 编译并放置本机 Rust sidecar，再启动 mygo 窗口、开发服务器和前端热更新
-bun run build    # release 编译 → 资源放置 → mygo 绑定 → TS 检查 → 前端构建 → Go 打包
+bun run dev      # 启动 mygo 桌面窗口、开发服务器和前端热更新
+bun run build    # mygo 绑定 → TS 检查 → 前端构建 → Go 打包
 ```
 
 Vite 仅绑定 `127.0.0.1:5173`；应用版本来自 `package.json`。
@@ -37,30 +37,13 @@ bun run build --platform darwin/arm64
 bun run build --platform darwin/universal   # 需要 macOS SDK 与 lipo
 ```
 
-六个平台目标：`darwin/arm64`、`darwin/amd64`、`windows/amd64`、`windows/arm64`、`linux/amd64`、`linux/arm64`；发布工作流另构建 `darwin/universal`，同时提供 macOS 通用安装包。Go/mygo 支持交叉编译，Rust sidecar 需要对应目标的标准库和链接器；可靠的发布流程在目标系统原生 runner 上构建，见 [build.yml](../.github/workflows/build.yml)。
+六个平台目标：`darwin/arm64`、`darwin/amd64`、`windows/amd64`、`windows/arm64`、`linux/amd64`、`linux/arm64`；发布工作流另构建 `darwin/universal`，同时提供 macOS 通用安装包。核心逻辑位于 `internal/core`，随 Go 主程序直接编译进应用二进制，不再需要单独编译或分发 sidecar；可靠的发布流程在目标系统原生 runner 上构建，见 [build.yml](../.github/workflows/build.yml)。
 
-Universal 会编译两种 Rust 核心，mygo 自动将两个平台的 sidecar 和 Go 主程序合并为通用二进制。构建后使用 macOS `ditto` 将 `Siu.app` 打包为 ZIP，保留应用资源、符号链接和签名，产物位于 `build/darwin-universal/`。
+Universal 由 mygo 自动编译两种架构的 Go 主程序并合并为通用二进制。构建后使用 macOS `ditto` 将 `Siu.app` 打包为 ZIP，保留应用资源、符号链接和签名，产物位于 `build/darwin-universal/`。
 
-## Rust Sidecar
+## 进程内 Go 核心
 
-```sh
-bun run prepare:core   # 编译本机目标（使用 Cargo lockfile）
-```
-
-生成：
-
-```
-resources/<os>-<arch>/bin/siu-core[.exe]
-internal/backend/bundle/siu-core.bin
-```
-
-mygo 打包时将当前平台资源平铺到应用资源目录。Go 优先使用 `bin/siu-core`（随应用一起签名）；开发或 `go run` 时可使用嵌入的备用副本。`SIU_GUI_CORE` 可显式覆盖，供开发和测试使用。
-
-核心按需启动，通过 stdin/stdout NDJSON 与 Go 通信。崩溃不自动重试写入，下次请求可重启进程；取消或超时会明确提示结果未知。应用退出时关闭 stdin，必要时回收整个进程树。生产应用通过 mygo IPC 工作，不启动 HTTP 服务器；`cmd/testhost` 是独立测试程序，未编入生产应用。
-
-## GNU/glibc
-
-Linux Rust 核心默认使用 GNU/glibc，与 GTK/WebKitGTK 环境一致。发行构建使用原生 Linux runner（x64：Ubuntu 22.04；ARM64：Ubuntu 24.04）。构建脚本会在本机目标编译后，以隔离目录启动核心并检查版本，失败则阻止打包。`CORE_LINUX_LIBC=musl` 仅供自备工具链的定制构建，须通过同样的启动检查。GNU 产物受构建机 glibc 版本限制。
+siu 核心（`internal/core`）在 mygo 主进程内运行，通过绑定的 `Desktop.Request` 处理 JSON 协议请求：读操作与网络查询可并发执行，写操作通过互斥锁串行化并在每次请求时重新打开资源库，与 `siu` CLI 共享 `~/.siu` 数据。应用退出时自动清理扫描残留的临时目录。生产应用通过 mygo IPC 工作，不启动 HTTP 服务器；`cmd/testhost` 是独立测试程序，未编入生产应用。
 
 ## 应用图标
 

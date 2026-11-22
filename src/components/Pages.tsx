@@ -58,73 +58,101 @@ export function AgentsPage({
       <div className="page-scroll">
         {detected.length ? (
           <div className="agent-page-grid">
-            {detected.map((a) => (
-              <article className="agent-card" key={a.id}>
-                <div className="agent-card-header">
-                  <Avatar agent={a} />
-                  <h2>{a.name}</h2>
-                  <span className="detected">已检测到</span>
-                </div>
-                <dl>
-                  <dt>MCP 配置</dt>
-                  <dd>
-                    {a.mcpPath ? (
-                      <button
-                        className="text-path"
-                        onClick={() => openPath(a.mcpPath!)}
-                        title={a.mcpPath}
-                      >
-                        {shortPath(a.mcpPath, snapshot.home)}
-                        <Icon name="external" />
-                      </button>
-                    ) : (
-                      "不支持"
-                    )}
-                  </dd>
-                  <dt>Skills 目录</dt>
-                  <dd>
-                    {a.skillsPath ? (
-                      <button
-                        className="text-path"
-                        onClick={() => openPath(a.skillsPath!)}
-                        title={a.skillsPath}
-                      >
-                        {shortPath(a.skillsPath, snapshot.home)}
-                        <Icon name="external" />
-                      </button>
-                    ) : (
-                      "不支持"
-                    )}
-                  </dd>
-                  <dt>协议支持</dt>
-                  <dd>
-                    {a.transports.length
-                      ? a.transports
-                          .map((x) => (x === "stdio" ? x : x.toUpperCase()))
-                          .join(" / ")
-                      : "无 MCP 配置"}
-                  </dd>
-                </dl>
-                <div className="agent-card-footer">
-                  <span>
-                    {snapshot.mcp.filter((x) => x.states[a.id] === "on").length}{" "}
-                    MCP 服务 ·{" "}
-                    {
-                      snapshot.skills.filter((x) => x.states[a.id] === "on")
-                        .length
-                    }{" "}
-                    Skills
-                  </span>
-                  <button
-                    className="btn small"
-                    onClick={() => onOpen(a.mcpPath ? "mcp" : "skills", a.id)}
-                  >
-                    查看分配
-                    <Icon name="chevron" />
-                  </button>
-                </div>
-              </article>
-            ))}
+            {detected.map((a) => {
+              const mcpCount = snapshot.mcp.filter(
+                  (x) => x.states[a.id] === "on",
+                ).length,
+                skillCount = snapshot.skills.filter(
+                  (x) => x.states[a.id] === "on",
+                ).length;
+              return (
+                <article className="agent-card" key={a.id}>
+                  <div className="agent-card-header">
+                    <Avatar agent={a} />
+                    <div>
+                      <h2>{a.name}</h2>
+                      <div className="agent-metrics">
+                        {a.mcpPath ? (
+                          <button
+                            className="metric-link"
+                            onClick={() => onOpen("mcp", a.id)}
+                          >
+                            {mcpCount} 个 MCP
+                          </button>
+                        ) : null}
+                        {a.skillsPath ? (
+                          <button
+                            className="metric-link"
+                            onClick={() => onOpen("skills", a.id)}
+                          >
+                            {skillCount} 个 Skills
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    <span className="detected">已检测到</span>
+                  </div>
+                  <dl>
+                    <dt>MCP 配置</dt>
+                    <dd>
+                      {a.mcpPath ? (
+                        <button
+                          className="text-path"
+                          onClick={() => openPath(a.mcpPath!)}
+                          title={a.mcpPath}
+                        >
+                          {shortPath(a.mcpPath, snapshot.home)}
+                          <Icon name="external" />
+                        </button>
+                      ) : (
+                        <span className="quiet">不支持</span>
+                      )}
+                    </dd>
+                    <dt>Skills 目录</dt>
+                    <dd>
+                      {a.skillsPath ? (
+                        <button
+                          className="text-path"
+                          onClick={() => openPath(a.skillsPath!)}
+                          title={a.skillsPath}
+                        >
+                          {shortPath(a.skillsPath, snapshot.home)}
+                          <Icon name="external" />
+                        </button>
+                      ) : (
+                        <span className="quiet">不支持</span>
+                      )}
+                    </dd>
+                    <dt>支持协议</dt>
+                    <dd>
+                      {a.transports.length ? (
+                        <div className="protocol-pills">
+                          {a.transports.map((x) => (
+                            <span className="pill" key={x}>
+                              {x === "stdio" ? x : x.toUpperCase()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="quiet">无 MCP 配置</span>
+                      )}
+                    </dd>
+                  </dl>
+                  <div className="agent-card-footer">
+                    <span>
+                      {mcpCount} MCP 服务 · {skillCount} Skills
+                    </span>
+                    <button
+                      className="btn small"
+                      onClick={() => onOpen(a.mcpPath ? "mcp" : "skills", a.id)}
+                    >
+                      查看分配
+                      <Icon name="chevron" />
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className="empty">
@@ -152,14 +180,16 @@ export function AgentsPage({
           <section className="undetected-agents">
             <h2>其他支持的 Agent</h2>
             <p>安装并启动后，siu 会识别以下配置目录。</p>
-            {undetected.map((a) => (
-              <div className="undetected-row" key={a.id}>
-                <Avatar agent={a} />
-                <span>{agentLabel(a)}</span>
-                <code title={a.home}>{shortPath(a.home, snapshot.home)}</code>
-                <span className="quiet">未检测到</span>
-              </div>
-            ))}
+            <div className="undetected-card">
+              {undetected.map((a) => (
+                <div className="undetected-row" key={a.id}>
+                  <Avatar agent={a} />
+                  <span>{agentLabel(a)}</span>
+                  <code title={a.home}>{shortPath(a.home, snapshot.home)}</code>
+                  <span className="quiet">未检测到</span>
+                </div>
+              ))}
+            </div>
           </section>
         ) : null}
       </div>
@@ -187,7 +217,8 @@ export function SettingsPage({
   mutate: Mutate;
   onDone: (result: MutationResult, title?: string) => void;
 }) {
-  const [proxyGeneration, setProxyGeneration] = useState(0);
+  const [proxyGeneration, setProxyGeneration] = useState(0),
+    [activeSection, setActiveSection] = useState("settings-appearance");
   const restored = (result: MutationResult) => {
     setProxyGeneration((generation) => generation + 1);
     if (result.theme) setTheme(result.theme);
@@ -197,6 +228,14 @@ export function SettingsPage({
       void api.openPath(path).catch((e) => notify(errorMessage(e))),
     visit = (url: string) =>
       void api.openURL(url).catch((e) => notify(errorMessage(e)));
+  const sections = [
+    { id: "settings-appearance", label: "外观" },
+    { id: "settings-network", label: "网络" },
+    { id: "settings-transfer", label: "配置迁移" },
+    { id: "settings-data", label: "本机数据" },
+    { id: "settings-resources", label: "资源管理" },
+    { id: "settings-about", label: "关于" },
+  ];
   return (
     <>
       <header className="page-head">
@@ -210,12 +249,16 @@ export function SettingsPage({
       <div className="page-scroll">
         <div className="settings">
           <nav className="settings-links" aria-label="设置分类">
-            <a href="#settings-appearance">外观</a>
-            <a href="#settings-network">网络</a>
-            <a href="#settings-transfer">配置迁移</a>
-            <a href="#settings-data">本机数据</a>
-            <a href="#settings-resources">资源管理</a>
-            <a href="#settings-about">关于</a>
+            {sections.map((section) => (
+              <a
+                key={section.id}
+                href={"#" + section.id}
+                className={activeSection === section.id ? "active" : ""}
+                onClick={() => setActiveSection(section.id)}
+              >
+                {section.label}
+              </a>
+            ))}
           </nav>
           <section className="settings-section" id="settings-appearance">
             <h2>外观</h2>
@@ -304,7 +347,10 @@ export function SettingsPage({
               </Note>
             </div>
           </section>
-          <section className="settings-section" id="settings-resources">
+          <section
+            className="settings-section danger-section"
+            id="settings-resources"
+          >
             <h2>资源管理</h2>
             {(
               [

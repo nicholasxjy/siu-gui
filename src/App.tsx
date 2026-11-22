@@ -155,6 +155,8 @@ function Application() {
       } else if (event.key === "1") navigate("mcp");
       else if (event.key === "2") navigate("skills");
       else if (event.key === "3") navigate("discover");
+      else if (event.key === "4") navigate("agents");
+      else if (event.key === "5") navigate("settings");
       else if (event.key.toLowerCase() === "a" && !busy) {
         document.querySelector<HTMLButtonElement>("[data-add]")?.click();
       } else if (event.key === "?") setDialog({ type: "shortcuts" });
@@ -162,7 +164,34 @@ function Application() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [dialog, busy, navigate, app.refresh]);
-  const nav = (id: Page, glyph: IconName, label: string, count?: number) => (
+  const detectedAgents =
+    snapshot?.agents.filter((a) => a.detected && a.id !== "agents") || [];
+  const activeKind: Kind = page === "skills" ? "skills" : "mcp";
+  const pageTitle: Record<Page, string> = {
+    mcp: "MCP 服务",
+    skills: "Skills",
+    discover: "发现",
+    agents: "本机 Agent",
+    settings: "设置",
+  };
+  const activeFilterAgent = detectedAgents.find((a) => a.id === agentFilter);
+  const cycleTheme = () =>
+    app.setTheme(
+      app.theme === "light"
+        ? "dark"
+        : app.theme === "dark"
+          ? "system"
+          : "light",
+    );
+  const themeLabel =
+    app.theme === "light" ? "浅色" : app.theme === "dark" ? "深色" : "跟随系统";
+  const nav = (
+    id: Page,
+    glyph: IconName,
+    label: string,
+    count?: number,
+    attention = false,
+  ) => (
     <button
       className={"nav-button " + (page === id ? "active" : "")}
       onClick={() => navigate(id)}
@@ -172,6 +201,7 @@ function Application() {
     >
       <Icon name={glyph} />
       <span className="nav-text">{label}</span>
+      {attention ? <span className="nav-dot" aria-hidden="true" /> : null}
       {count !== undefined ? <span className="nav-count">{count}</span> : null}
     </button>
   );
@@ -181,8 +211,14 @@ function Application() {
         <header className="titlebar">
           <div className="window-title">
             <strong>siu</strong>
-            <span>/</span>
-            <span>本机工作空间</span>
+            <span className="title-sep">/</span>
+            <span>{pageTitle[page]}</span>
+            {activeFilterAgent ? (
+              <>
+                <span className="title-sep">/</span>
+                <span className="title-accent">{activeFilterAgent.name}</span>
+              </>
+            ) : null}
           </div>
           <div className="titlebar-right">
             <Icon name="lock" />
@@ -193,15 +229,38 @@ function Application() {
           <aside className="sidebar" aria-label="应用导航">
             <div className="brand">
               <Brand />
-              <span className="wordmark">siu</span>
-              <span className="brand-caption">Agent 工具箱</span>
+              <div className="brand-copy">
+                <span className="wordmark">siu</span>
+                <span className="brand-caption">Agent 工具箱</span>
+              </div>
             </div>
-            <p className="nav-label">我的资源</p>
-            {nav("mcp", "plug", "MCP 服务", snapshot?.mcp.length)}
-            {nav("skills", "skill", "Skills", snapshot?.skills.length)}
-            <div className="nav-separator" />
-            {nav("discover", "compass", "发现")}
-            {nav("agents", "monitor", "本机 Agent")}
+            <div className="nav-group">
+              <p className="nav-label">资源库</p>
+              {nav(
+                "mcp",
+                "plug",
+                "MCP 服务",
+                snapshot?.mcp.length,
+                Boolean(snapshot?.foundMcp.length),
+              )}
+              {nav(
+                "skills",
+                "skill",
+                "Skills",
+                snapshot?.skills.length,
+                Boolean(snapshot?.foundSkills.length),
+              )}
+            </div>
+            <div className="nav-group">
+              <p className="nav-label">探索与环境</p>
+              {nav("discover", "compass", "发现")}
+              {nav(
+                "agents",
+                "monitor",
+                "本机 Agent",
+                snapshot ? detectedAgents.length : undefined,
+              )}
+            </div>
             <div className="agents-heading">
               <span>按 Agent 筛选</span>
               <div className="actions">
@@ -210,23 +269,18 @@ function Application() {
                   disabled={Boolean(busy)}
                   onClick={() => void app.refresh()}
                   aria-label="重新扫描 Agent"
-                  title="重新扫描"
+                  title="重新扫描本机 Agent 与配置"
                 >
                   <Icon name="refresh" />
-                </button>
-                <button
-                  className="tiny-button"
-                  onClick={() => navigate("agents")}
-                  aria-label="管理本机 Agent"
-                >
-                  <Icon name="settings" />
                 </button>
               </div>
             </div>
             <div className="agents-list">
-              {snapshot?.agents
-                .filter((a) => a.detected && a.id !== "agents")
-                .map((a) => (
+              {detectedAgents.map((a) => {
+                const activeCount = (
+                  activeKind === "mcp" ? snapshot?.mcp : snapshot?.skills
+                )?.filter((x) => x.agents.includes(a.id)).length;
+                return (
                   <button
                     key={a.id}
                     className={
@@ -236,21 +290,25 @@ function Application() {
                     onClick={() => agentClick(a.id)}
                     aria-label={"筛选 " + a.name + " 的资源"}
                     aria-pressed={agentFilter === a.id}
-                    title={"查看分配给 " + a.name + " 的资源"}
+                    title={
+                      agentFilter === a.id
+                        ? "再次点击清除 " + a.name + " 筛选"
+                        : "只看分配给 " + a.name + " 的资源"
+                    }
                   >
                     <Avatar agent={a} />
                     <span className="nav-text">{a.name}</span>
-                    <span className="agent-dot" />
+                    <span className="nav-count">{activeCount ?? 0}</span>
                   </button>
-                ))}
-              {snapshot &&
-              !snapshot.agents.some((a) => a.detected && a.id !== "agents") ? (
+                );
+              })}
+              {snapshot && !detectedAgents.length ? (
                 <button
                   className="nav-button"
                   onClick={() => navigate("agents")}
                 >
                   <Icon name="plus" />
-                  <span className="nav-text">添加你的 Agent</span>
+                  <span className="nav-text">查看支持的 Agent</span>
                 </button>
               ) : null}
             </div>
@@ -259,28 +317,50 @@ function Application() {
                 className={"saved " + (issues.length ? "has-issues" : "")}
                 title={busy || issues[0] || "资源库已读取，变更时写入本机配置"}
               >
-                {busy ? <Icon name="spinner" /> : <span />}
+                {busy ? (
+                  <Icon name="spinner" />
+                ) : (
+                  <span className="saved-dot" />
+                )}
                 <span className="saved-text">
                   {busy
                     ? "正在处理…"
                     : issues.length
                       ? "有配置需要处理"
                       : snapshot
-                        ? "配置已读取"
+                        ? "本机配置已就绪"
                         : "正在连接…"}
                 </span>
               </div>
               {nav("settings", "settings", "设置")}
-              <button
-                className="nav-button"
-                onClick={() => setDialog({ type: "shortcuts" })}
-                title="快捷键"
-                aria-label="快捷键"
-              >
-                <Icon name="terminal" />
-                <span className="nav-text">快捷键</span>
-                <kbd className="shortcut">?</kbd>
-              </button>
+              <div className="sidebar-utils">
+                <button
+                  className="nav-button util-button"
+                  onClick={() => setDialog({ type: "shortcuts" })}
+                  title="快捷键"
+                  aria-label="快捷键"
+                >
+                  <Icon name="terminal" />
+                  <span className="nav-text">快捷键</span>
+                  <kbd className="shortcut">?</kbd>
+                </button>
+                <button
+                  className="icon-button theme-quick"
+                  onClick={cycleTheme}
+                  title={"切换界面主题（当前：" + themeLabel + "）"}
+                  aria-label={"切换界面主题（当前：" + themeLabel + "）"}
+                >
+                  <Icon
+                    name={
+                      app.theme === "light"
+                        ? "sun"
+                        : app.theme === "dark"
+                          ? "moon"
+                          : "monitor"
+                    }
+                  />
+                </button>
+              </div>
             </div>
           </aside>
           <main className="main" aria-busy={Boolean(busy)}>

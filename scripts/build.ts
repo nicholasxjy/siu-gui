@@ -1,9 +1,6 @@
 #!/usr/bin/env bun
-// `bun run build`: builds siu-core for every target platform (scripts/
-// core.ts) before building and packaging the app with `mygo build`, so a
-// target is never packaged with a stale or wrong-architecture sidecar
-// (resources/<goos>-<goarch>/bin/siu-core, see
-// docs/distribution.md#platform-resources).
+// `bun run build`: validates target platform(s), builds and packages the app
+// with `mygo build`, and creates the macOS universal ZIP when requested.
 //
 // Usage:
 //   bun run build                                   # this machine's platform
@@ -11,24 +8,23 @@
 //   bun run build -platform windows/amd64,linux/amd64
 //   bun run build --platform darwin/universal        # arm64 + amd64, merged by mygo
 //   bun run build --platform darwin/arm64 -- -skip-notarize   # extra mygo build flags
-//
-// Every target named in --platform/-platform is staged with its own
-// siu-core before the single `mygo build -platform <...>` call that
-// packages all of them (so the frontend is only built once); extra CLI
-// arguments are forwarded to `mygo build` unchanged.
 
-import { chmod } from "node:fs/promises";
-import { join } from "node:path";
-import {
-  REPO_ROOT,
-  HOST,
-  buildCore,
-  exists,
-  resourceBinPath,
-  run,
-  type GoArch,
-  type GoOS,
-} from "./core.ts";
+import { join, resolve } from "node:path";
+
+export type GoOS = "darwin" | "windows" | "linux";
+export type GoArch = "amd64" | "arm64";
+
+export const REPO_ROOT = resolve(import.meta.dir, "..");
+
+export const HOST: { goos: GoOS; goarch: GoArch } = {
+  goos:
+    process.platform === "darwin"
+      ? "darwin"
+      : process.platform === "win32"
+        ? "windows"
+        : "linux",
+  goarch: process.arch === "arm64" ? "arm64" : "amd64",
+};
 
 const SUPPORTED_ARCHES: Record<GoOS, GoArch[]> = {
   darwin: ["arm64", "amd64"],
@@ -36,7 +32,7 @@ const SUPPORTED_ARCHES: Record<GoOS, GoArch[]> = {
   linux: ["amd64", "arm64"],
 };
 
-interface PlatformEntry {
+export interface PlatformEntry {
   raw: string;
   goos: GoOS;
   universal: boolean;
@@ -72,18 +68,6 @@ export function parsePlatformEntry(raw: string): PlatformEntry {
   return { raw, goos, universal: false, goarch: archPart as GoArch };
 }
 
-export function coreTargetsFor(
-  entry: PlatformEntry,
-): { goos: GoOS; goarch: GoArch }[] {
-  if (entry.universal) {
-    return [
-      { goos: "darwin", goarch: "arm64" },
-      { goos: "darwin", goarch: "amd64" },
-    ];
-  }
-  return [{ goos: entry.goos, goarch: entry.goarch as GoArch }];
-}
-
 interface ParsedArgs {
   platform?: string;
   passthrough: string[];
@@ -108,12 +92,24 @@ export function parseArgs(argv: string[]): ParsedArgs {
       platform = arg.slice("-platform=".length);
       continue;
     }
-    if (arg === "--") continue; // conventional separator before passthrough flags
+    if (arg === "--") continue;
     passthrough.push(arg);
   }
   if (platform !== undefined && !platform.trim())
     throw new Error("--platform requires a value");
   return { platform, passthrough };
+}
+
+async function run(cmd: string[]): Promise<void> {
+  const proc = Bun.spawn(cmd, {
+    cwd: REPO_ROOT,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  const code = await proc.exited;
+  if (code !== 0) {
+    throw new Error(`${cmd.join(" ")} exited with code ${code}`);
+  }
 }
 
 async function main(): Promise<void> {
@@ -128,62 +124,7 @@ async function main(): Promise<void> {
   if (entries.some((entry) => entry.universal) && process.platform !== "darwin")
     throw new Error("darwin/universal requires macOS and lipo");
 
-  const seen = new Set<string>();
-  const coreTargets: { goos: GoOS; goarch: GoArch }[] = [];
-  for (const entry of entries) {
-    for (const t of coreTargetsFor(entry)) {
-      const key = `${t.goos}/${t.goarch}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        coreTargets.push(t);
-      }
-    }
-  }
-
   console.log(`[build] platform(s): ${platformArg}`);
-  console.log(
-    `[build] core targets: ${coreTargets.map((t) => `${t.goos}/${t.goarch}`).join(", ")}`,
-  );
-
-  // Build and stage every target's siu-core *before* calling `mygo
-  // build`, one target at a time, so a failure for one architecture
-  // never leaves another target packaged with the wrong (or a stale)
-  // sidecar.
-  for (const target of coreTargets) {
-    await buildCore(target);
-    const path = resourceBinPath(target);
-    if (!(await exists(path))) {
-      throw new Error(
-        `internal error: expected ${path} to exist after buildCore(${target.goos}/${target.goarch})`,
-      );
-    }
-  }
-
-  if (entries.some((entry) => entry.universal)) {
-    const universal = join(
-      REPO_ROOT,
-      "internal",
-      "backend",
-      "bundle",
-      "siu-core.bin",
-    );
-    await run([
-      "lipo",
-      "-create",
-      resourceBinPath({ goos: "darwin", goarch: "arm64" }),
-      resourceBinPath({ goos: "darwin", goarch: "amd64" }),
-      "-output",
-      universal,
-    ]);
-    await chmod(universal, 0o755);
-    await run(["codesign", "--force", "--sign", "-", universal]);
-  }
-
-  console.log(
-    "[build] all core binaries staged; building the app with mygo...",
-  );
-  // `bun x` resolves the project's own mygo-cli dependency the same way
-  // `bunx` would, without a shell.
   await run([
     "bun",
     "x",

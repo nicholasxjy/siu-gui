@@ -12,6 +12,7 @@ import {
   description,
   displayName,
   groupName,
+  isMcp,
   shortPath,
   stateLabel,
 } from "../utils";
@@ -125,94 +126,168 @@ export function Library({
       /* Optional display preference. */
     }
   }, [collapsed]);
+  const pausedCount = entries.filter((x) => !x.enabled).length,
+    errorCount = entries.filter((x) =>
+      Object.values(x.states).includes("error"),
+    ).length;
   const select = (name: string) => {
     onSelect(name);
     setDrawer(true);
   };
-  const resourceRows = (items: Resource[]) =>
-    items.map((item) => (
-      <tr
-        key={item.name}
-        className={entry?.name === item.name ? "selected" : ""}
-      >
-        <td>
-          <div className="resource-cell">
-            <ToolIcon name={item.name} kind={kind} />
+  const showUnmanaged =
+    !deferred && !agentFilter && status === "all" && found.length > 0;
+  const unmanagedPanel = showUnmanaged ? (
+    <section className="unmanaged-panel" aria-label="本机发现的未托管资源">
+      <div className="unmanaged-panel-head">
+        <div className="unmanaged-panel-title">
+          <Icon name="download" />
+          <strong>在 Agent 中发现 {found.length} 项已有配置</strong>
+          <span className="unmanaged-panel-sub">
+            尚未由 siu 托管，可一键导入统一管理
+          </span>
+        </div>
+      </div>
+      <div className="unmanaged-list">
+        {found.map((x) => (
+          <div className="unmanaged" key={x.name}>
+            <ToolIcon name={x.name} kind={kind} />
+            <div className="unmanaged-info">
+              <strong>{x.name}</strong>
+              <p>
+                来自{" "}
+                {x.agents
+                  .map(
+                    (id) =>
+                      snapshot.agents.find((a) => a.id === id)?.name || id,
+                  )
+                  .join("、")}
+              </p>
+            </div>
             <button
-              className="resource-title"
-              aria-pressed={entry?.name === item.name}
-              onClick={() => select(item.name)}
-              title={item.name}
-              aria-label={"查看 " + displayName(item.name, kind) + " 详情"}
+              className="btn small"
+              disabled={Boolean(busy)}
+              onClick={() => onDialog({ type: "import", kind, name: x.name })}
             >
-              <span className="resource-name">
-                {displayName(item.name, kind)}
-                {!item.enabled ? (
-                  <span className="inline-label">已暂停</span>
-                ) : null}
-              </span>
-              <span className="resource-description">
-                {description(item) || "暂无描述"}
-              </span>
+              <Icon name="download" />
+              导入管理
             </button>
           </div>
-        </td>
-        {agents.map((a) => {
-          const state = item.states[a.id] || "off",
-            chosen = item.agents.includes(a.id),
-            unsupported = state.startsWith("unsupported:"),
-            glyph: IconName =
-              state === "on"
-                ? "check"
-                : state === "paused"
-                  ? "pause"
-                  : state === "error"
-                    ? "warning"
-                    : "check";
-          return (
-            <td key={a.id}>
+        ))}
+      </div>
+    </section>
+  ) : null;
+  const resourceRows = (items: Resource[]) =>
+    items.map((item) => {
+      const hasError = Object.values(item.states).includes("error");
+      return (
+        <tr
+          key={item.name}
+          className={
+            (entry?.name === item.name ? "selected " : "") +
+            (!item.enabled ? "is-paused" : "")
+          }
+        >
+          <td
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("button")) return;
+              select(item.name);
+            }}
+          >
+            <div className="resource-cell">
+              <ToolIcon name={item.name} kind={kind} />
               <button
-                disabled={Boolean(busy) || (unsupported && !chosen)}
-                className={
-                  "allocation " +
-                  (state === "on"
-                    ? "on"
-                    : state === "paused"
-                      ? "paused"
-                      : state === "error"
-                        ? "write-error"
-                        : "")
-                }
-                onClick={() => onAllocation(item, a)}
-                aria-pressed={state === "on"}
-                aria-label={
-                  displayName(item.name, kind) +
-                  " · " +
-                  agentLabel(a) +
-                  " · " +
-                  stateLabel(state)
-                }
-                title={
-                  stateLabel(state) +
-                  (chosen
-                    ? "，点击" + (!item.enabled ? "恢复所有分配" : "移除分配")
-                    : "，点击分配")
-                }
+                className="resource-title"
+                aria-pressed={entry?.name === item.name}
+                onClick={() => select(item.name)}
+                title={item.name}
+                aria-label={"查看 " + displayName(item.name, kind) + " 详情"}
               >
-                <span className="sr-only">{stateLabel(state)}</span>
-                {unsupported ? (
-                  <span className="unsupported">—</span>
-                ) : state === "on" ||
-                  state === "paused" ||
-                  state === "error" ? (
-                  <Icon name={glyph} />
-                ) : null}
+                <span className="resource-name-row">
+                  <span className="resource-name">
+                    {displayName(item.name, kind)}
+                  </span>
+                  {isMcp(item) ? (
+                    <span className="transport-tag">
+                      {item.transport === "stdio"
+                        ? "stdio"
+                        : item.transport.toUpperCase()}
+                    </span>
+                  ) : null}
+                  {!item.enabled ? (
+                    <span className="inline-label">已暂停</span>
+                  ) : null}
+                  {hasError ? (
+                    <span className="inline-label danger">写入未完成</span>
+                  ) : null}
+                </span>
+                <span className="resource-description">
+                  {description(item) || "暂无描述"}
+                </span>
               </button>
-            </td>
-          );
-        })}
-      </tr>
-    ));
+            </div>
+          </td>
+          {agents.map((a) => {
+            const state = item.states[a.id] || "off",
+              chosen = item.agents.includes(a.id),
+              unsupported = state.startsWith("unsupported:"),
+              glyph: IconName =
+                state === "on"
+                  ? "check"
+                  : state === "paused"
+                    ? "pause"
+                    : state === "error"
+                      ? "warning"
+                      : "check";
+            return (
+              <td key={a.id}>
+                <button
+                  disabled={Boolean(busy) || (unsupported && !chosen)}
+                  className={
+                    "allocation " +
+                    (state === "on"
+                      ? "on"
+                      : state === "paused"
+                        ? "paused"
+                        : state === "error"
+                          ? "write-error"
+                          : unsupported
+                            ? "is-unsupported"
+                            : "")
+                  }
+                  onClick={() => onAllocation(item, a)}
+                  aria-pressed={state === "on"}
+                  aria-label={
+                    displayName(item.name, kind) +
+                    " · " +
+                    agentLabel(a) +
+                    " · " +
+                    stateLabel(state)
+                  }
+                  title={
+                    stateLabel(state) +
+                    (unsupported && !chosen
+                      ? ""
+                      : chosen
+                        ? "，点击" +
+                          (!item.enabled ? "恢复全部 Agent 分配" : "取消分配")
+                        : "，点击分配给 " + agentLabel(a))
+                  }
+                >
+                  <span className="sr-only">{stateLabel(state)}</span>
+                  {unsupported ? (
+                    <span className="unsupported">—</span>
+                  ) : state === "on" ||
+                    state === "paused" ||
+                    state === "error" ? (
+                    <Icon name={glyph} />
+                  ) : null}
+                </button>
+              </td>
+            );
+          })}
+        </tr>
+      );
+    });
   const table = (
     <table
       className="matrix"
@@ -271,7 +346,7 @@ export function Library({
                     <strong title={group}>
                       {shortPath(group, snapshot.home)}
                     </strong>
-                    <span className="count">{items.length} Skills</span>
+                    <span className="count">{items.length} 项</span>
                   </button>
                 </th>
               </tr>
@@ -368,31 +443,53 @@ export function Library({
             </select>
           </div>
           <div className="library-context">
-            <span role="status">
-              {shown.length} 项{kind === "mcp" ? "服务" : " Skills"}
-              <span className="context-divider">·</span>
-              {agents.length} 个可分配 Agent
-            </span>
-            {filterAgent ? (
-              <button className="filter-chip" onClick={onClearAgent}>
-                <Avatar agent={filterAgent} />
-                {agentLabel(filterAgent)}
-                <Icon name="close" />
-                <span className="sr-only">清除 Agent 筛选</span>
-              </button>
-            ) : query || status !== "all" ? (
-              <button
-                className="text-button"
-                onClick={() => {
-                  setQuery("");
-                  setStatus("all");
-                }}
-              >
-                清除筛选
-              </button>
-            ) : null}
+            <div className="context-summary">
+              <span role="status">
+                {shown.length} 项{kind === "mcp" ? "服务" : " Skills"}
+                <span className="context-divider">·</span>
+                {agents.length} 个可分配 Agent
+              </span>
+              {pausedCount > 0 && status !== "paused" ? (
+                <button
+                  className="status-pill amber"
+                  onClick={() => setStatus("paused")}
+                >
+                  {pausedCount} 已暂停
+                </button>
+              ) : null}
+              {errorCount > 0 && status !== "error" ? (
+                <button
+                  className="status-pill danger"
+                  onClick={() => setStatus("error")}
+                >
+                  {errorCount} 需处理
+                </button>
+              ) : null}
+            </div>
+            <div className="context-actions">
+              {filterAgent ? (
+                <button className="filter-chip" onClick={onClearAgent}>
+                  <Avatar agent={filterAgent} />
+                  <span>仅看 {agentLabel(filterAgent)}</span>
+                  <Icon name="close" />
+                  <span className="sr-only">清除 Agent 筛选</span>
+                </button>
+              ) : null}
+              {query || status !== "all" ? (
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    setQuery("");
+                    setStatus("all");
+                  }}
+                >
+                  清除筛选
+                </button>
+              ) : null}
+            </div>
           </div>
           <div className="list-scroll">
+            {entries.length > 0 ? unmanagedPanel : null}
             {!entries.length ? (
               <div className="empty">
                 <Icon name={kind === "mcp" ? "plug" : "skill"} />
@@ -406,17 +503,28 @@ export function Library({
                     ? "从发现页安装服务，或导入 Agent 中已有的配置。"
                     : "从 GitHub 或本地目录添加，按 Agent 复用工作流程。"}
                 </p>
-                <button
-                  className="btn primary"
-                  onClick={
-                    kind === "mcp"
-                      ? onDiscover
-                      : () => onDialog({ type: "skill-source" })
-                  }
-                >
-                  <Icon name={kind === "mcp" ? "compass" : "plus"} />
-                  {kind === "mcp" ? "发现 MCP 服务" : "添加 Skill"}
-                </button>
+                <div className="empty-actions">
+                  <button
+                    className="btn primary"
+                    onClick={
+                      kind === "mcp"
+                        ? onDiscover
+                        : () => onDialog({ type: "skill-source" })
+                    }
+                  >
+                    <Icon name={kind === "mcp" ? "compass" : "plus"} />
+                    {kind === "mcp" ? "发现 MCP 服务" : "添加 Skill"}
+                  </button>
+                  {kind === "mcp" ? (
+                    <button
+                      className="btn"
+                      onClick={() => onDialog({ type: "server" })}
+                    >
+                      <Icon name="plus" />
+                      手动填写配置
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ) : !shown.length ? (
               <div className="empty">
@@ -437,48 +545,7 @@ export function Library({
             ) : (
               table
             )}
-            {!deferred &&
-            !agentFilter &&
-            status === "all" &&
-            found.length > 0 ? (
-              <>
-                <div className="section-caption">
-                  <span>
-                    <strong>在 Agent 中发现</strong>
-                    <span className="number-badge">{found.length}</span>
-                  </span>
-                  <span>尚未由 siu 管理</span>
-                </div>
-                {found.map((x) => (
-                  <div className="unmanaged" key={x.name}>
-                    <ToolIcon name={x.name} kind={kind} />
-                    <div className="unmanaged-info">
-                      <strong>{x.name}</strong>
-                      <p>
-                        来自{" "}
-                        {x.agents
-                          .map(
-                            (id) =>
-                              snapshot.agents.find((a) => a.id === id)?.name ||
-                              id,
-                          )
-                          .join("、")}
-                      </p>
-                    </div>
-                    <button
-                      className="btn"
-                      disabled={Boolean(busy)}
-                      onClick={() =>
-                        onDialog({ type: "import", kind, name: x.name })
-                      }
-                    >
-                      <Icon name="download" />
-                      导入管理
-                    </button>
-                  </div>
-                ))}
-              </>
-            ) : null}
+            {entries.length === 0 ? unmanagedPanel : null}
           </div>
           <div className="list-footer">
             <span className="legend">
@@ -493,7 +560,9 @@ export function Library({
               <Icon name="pause" />
               已暂停
             </span>
-            <span className="footer-right">点击方格，分配给 Agent</span>
+            <span className="footer-right">
+              点击行查看详情 · 点击方格开关对应 Agent
+            </span>
           </div>
         </section>
         {entry ? (

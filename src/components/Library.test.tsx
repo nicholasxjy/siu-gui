@@ -222,4 +222,68 @@ describe("资源管理反馈", () => {
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
   });
+  it("支持点击资源单元格选中、点击状态计数快速筛选，并置顶展示未托管发现", async () => {
+    const snapshot = fixture();
+    snapshot.mcp.push({
+      ...snapshot.mcp[0],
+      name: "fetch",
+      enabled: false,
+      states: { claude: "paused", codex: "paused", cursor: "off" },
+    });
+    snapshot.foundMcp.push({
+      server: {
+        name: "local-tool",
+        transport: "stdio",
+        command: "node",
+        args: [],
+        env: {},
+        url: "",
+        headers: {},
+      },
+      agents: ["claude"],
+    });
+    const onSelect = vi.fn();
+    render(
+      <Library
+        snapshot={snapshot}
+        kind="mcp"
+        agentFilter=""
+        onClearAgent={vi.fn()}
+        selected="context7"
+        onSelect={onSelect}
+        onDialog={vi.fn()}
+        onDiscover={vi.fn()}
+        onAllocation={vi.fn()}
+        onPause={vi.fn()}
+        busy=""
+        notify={vi.fn()}
+      />,
+    );
+    const user = userEvent.setup();
+    const unmanaged = screen.getByRole("region", {
+      name: "本机发现的未托管资源",
+    });
+    const table = screen.getByRole("table");
+    expect(
+      unmanaged.compareDocumentPosition(table) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    const fetchCell = screen
+      .getByRole("button", { name: "查看 Fetch 详情" })
+      .closest("td")!;
+    await user.click(fetchCell);
+    expect(onSelect).toHaveBeenCalledWith("fetch");
+
+    await user.click(screen.getByRole("button", { name: "1 已暂停" }));
+    expect(screen.getByRole("combobox", { name: "筛选资源状态" })).toHaveValue(
+      "paused",
+    );
+    expect(
+      screen.queryByRole("button", { name: "查看 Context7 详情" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "查看 Fetch 详情" }),
+    ).toBeInTheDocument();
+  });
 });
