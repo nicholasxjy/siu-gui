@@ -411,6 +411,7 @@ export function Library({
               <Icon name="search" />
               <input
                 data-search
+                autoCorrect="off"
                 aria-label={kind === "mcp" ? "搜索 MCP 服务" : "搜索 Skills"}
                 placeholder={
                   kind === "mcp" ? "搜索名称或描述…" : "搜索 Skills 或来源…"

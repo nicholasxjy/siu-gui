@@ -105,6 +105,7 @@ export function Discover({ snapshot, onDialog, onOpen, busy }: Props) {
             <Icon name="search" />
             <input
               data-search
+              autoCorrect="off"
               aria-label="搜索发现资源"
               placeholder={
                 kind === "mcp"

@@ -198,6 +198,7 @@ function MapFields({
       {rows.map((row, index) => (
         <div className="pair-row" key={row.id}>
           <input
+            autoCorrect="off"
             aria-label={label + "名称 " + (index + 1)}
             placeholder={label === "请求头" ? "Authorization" : "API_KEY"}
             value={row.key}
@@ -211,6 +212,7 @@ function MapFields({
           />
           <div className="secret-input">
             <input
+              autoCorrect="off"
               aria-label={label + "值 " + (index + 1)}
               placeholder="值"
               type={visible.has(row.id) ? "text" : "password"}
@@ -362,6 +364,7 @@ export function ServerForm({ entry, ...props }: Common & { entry?: McpEntry }) {
               <label htmlFor={id + "name"}>服务名称</label>
               <input
                 id={id + "name"}
+                autoCorrect="off"
                 value={server.name}
                 required
                 maxLength={64}
@@ -400,6 +403,7 @@ export function ServerForm({ entry, ...props }: Common & { entry?: McpEntry }) {
                 <label htmlFor={id + "command"}>启动命令</label>
                 <input
                   id={id + "command"}
+                  autoCorrect="off"
                   required
                   value={server.command}
                   placeholder="npx / uvx / docker / 可执行文件路径"
@@ -412,6 +416,7 @@ export function ServerForm({ entry, ...props }: Common & { entry?: McpEntry }) {
                   <div className="argument-row" key={index}>
                     <span className="argument-index">{index + 1}</span>
                     <input
+                      autoCorrect="off"
                       aria-label={"参数 " + (index + 1)}
                       value={arg}
                       onChange={(e) =>
@@ -455,6 +460,7 @@ export function ServerForm({ entry, ...props }: Common & { entry?: McpEntry }) {
                 <input
                   id={id + "url"}
                   type="url"
+                  autoCorrect="off"
                   required
                   value={server.url}
                   placeholder="https://example.com/mcp"
@@ -688,6 +694,7 @@ function SkillSourceForm({
                 <div className="source-input">
                   <input
                     id={id + "source"}
+                    autoCorrect="off"
                     required
                     value={input}
                     disabled={scanning}
@@ -797,6 +804,7 @@ function MarketServerForm({
             <label htmlFor={id + "name"}>服务名称</label>
             <input
               id={id + "name"}
+              autoCorrect="off"
               value={name}
               required
               maxLength={64}
@@ -820,6 +828,7 @@ function MarketServerForm({
               <div className="secret-input">
                 <input
                   id={id + "input" + index}
+                  autoCorrect="off"
                   required={input.required}
                   type={
                     input.secret && !visible.has(input.key)

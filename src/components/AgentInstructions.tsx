@@ -346,6 +346,7 @@ export function AgentInstructions({
                         prev ? { ...prev, content: e.target.value } : prev,
                       )
                     }
+                    autoCorrect="off"
                     spellCheck={false}
                     placeholder="输入 Markdown 指令内容…"
                   />

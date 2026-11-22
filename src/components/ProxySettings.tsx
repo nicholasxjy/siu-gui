@@ -239,6 +239,7 @@ export function ProxySettingsForm({
                       disabled={disabled}
                       placeholder="http://127.0.0.1:7890"
                       autoComplete="off"
+                      autoCorrect="off"
                       spellCheck={false}
                       onChange={(e) =>
                         dispatch({
@@ -274,6 +275,7 @@ export function ProxySettingsForm({
                     disabled={disabled}
                     placeholder="localhost,127.0.0.1,*.local"
                     autoComplete="off"
+                    autoCorrect="off"
                     spellCheck={false}
                     onChange={(e) =>
                       dispatch({
