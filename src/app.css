@@ -115,6 +115,161 @@
   font-size: 13px;
 }
 
+/* AgentInstructions page */
+.instruction-list {
+  list-style: none;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.instruction-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.instruction-row:last-child {
+  border-bottom: 0;
+}
+
+.instruction-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.instruction-main .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  margin-top: 1px;
+}
+
+.instruction-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.instruction-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.instruction-agent {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.instruction-file {
+  font-size: 12px;
+  color: var(--secondary);
+  background: var(--subtle);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.status-pill.available {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.status-pill.neutral {
+  background: var(--hover);
+  color: var(--secondary);
+}
+
+.instruction-path {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.instruction-issue {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--red);
+  overflow-wrap: anywhere;
+}
+
+.instruction-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.instruction-modal-path {
+  margin: 0 0 14px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+
+.instruction-delete-path {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle);
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--secondary);
+}
+
+.instruction-delete-path svg {
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.instruction-delete-path code {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.field textarea.instruction-editor {
+  height: 280px;
+  min-height: 180px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.field textarea.instruction-editor:disabled {
+  background: var(--subtle);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 /* Responsive Breakpoints */
 @media (min-width: 1600px) {
   .sidebar {
@@ -339,5 +494,13 @@
   }
   .proxy-load-error {
     flex-wrap: wrap;
+  }
+  .instruction-row {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+  .instruction-actions {
+    width: 100%;
   }
 }

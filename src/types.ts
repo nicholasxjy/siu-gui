@@ -1,5 +1,5 @@
 export type Kind = "mcp" | "skills";
-export type Page = Kind | "discover" | "agents" | "settings";
+export type Page = Kind | "instructions" | "discover" | "agents" | "settings";
 export type Theme = "system" | "light" | "dark";
 export type Transport = "stdio" | "http" | "sse";
 export interface ServerConfig {
@@ -50,6 +50,14 @@ export interface FoundSkill {
   description: string;
   at: { agent: string; path: string }[];
 }
+export interface AgentInstruction {
+  id: string;
+  agent: string;
+  name: string;
+  path: string;
+  status: "missing" | "available" | "unavailable";
+  issue?: string;
+}
 export interface Snapshot {
   autoConfig?: { digest: string; theme?: Theme | null };
   home: string;
@@ -59,6 +67,7 @@ export interface Snapshot {
   agents: Agent[];
   mcp: McpEntry[];
   skills: SkillEntry[];
+  instructions?: AgentInstruction[];
   foundMcp: FoundMcp[];
   foundSkills: FoundSkill[];
   issues: string[];

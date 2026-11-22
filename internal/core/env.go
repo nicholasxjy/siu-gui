@@ -12,12 +12,16 @@ const TestHomeVar = "SIU_GUI_TEST_HOME"
 
 // Env describes where user files and agent overrides live on this machine.
 type Env struct {
-	Home      string
-	Config    string
-	ClaudeDir string
-	CodexHome string
-	PiDir     string
-	GrokHome  string
+	Home        string
+	Config      string
+	ClaudeDir   string
+	CodexHome   string
+	PiDir       string
+	GrokHome    string
+	GeminiHome  string
+	OpenCodeDir string
+	XDGConfig   string
+	CopilotHome string
 }
 
 // Resolved holds the active environment and siu library root.
@@ -48,12 +52,16 @@ func EnvFromSystem() Env {
 		}
 	}
 	return Env{
-		Home:      home,
-		Config:    config,
-		ClaudeDir: os.Getenv("CLAUDE_CONFIG_DIR"),
-		CodexHome: os.Getenv("CODEX_HOME"),
-		PiDir:     piDir,
-		GrokHome:  os.Getenv("GROK_HOME"),
+		Home:        home,
+		Config:      config,
+		ClaudeDir:   os.Getenv("CLAUDE_CONFIG_DIR"),
+		CodexHome:   os.Getenv("CODEX_HOME"),
+		PiDir:       piDir,
+		GrokHome:    os.Getenv("GROK_HOME"),
+		GeminiHome:  os.Getenv("GEMINI_CLI_HOME"),
+		OpenCodeDir: os.Getenv("OPENCODE_CONFIG_DIR"),
+		XDGConfig:   os.Getenv("XDG_CONFIG_HOME"),
+		CopilotHome: os.Getenv("COPILOT_HOME"),
 	}
 }
 

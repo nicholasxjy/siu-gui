@@ -13,6 +13,7 @@ import type {
 import { isMcp } from "./utils";
 import { useApplication } from "./useApp";
 import { Library } from "./components/Library";
+import { AgentInstructions } from "./components/AgentInstructions";
 import { Discover } from "./components/Discover";
 import { AgentsPage, SettingsPage } from "./components/Pages";
 import { Dialogs } from "./components/Forms";
@@ -170,6 +171,7 @@ function Application() {
   const pageTitle: Record<Page, string> = {
     mcp: "MCP 服务",
     skills: "Skills",
+    instructions: "AGENTS.md 管理",
     discover: "发现",
     agents: "本机 Agent",
     settings: "设置",
@@ -250,6 +252,7 @@ function Application() {
                 snapshot?.skills.length,
                 Boolean(snapshot?.foundSkills.length),
               )}
+              {nav("instructions", "file", "AGENTS.md 管理")}
             </div>
             <div className="nav-group">
               <p className="nav-label">探索与环境</p>
@@ -419,6 +422,14 @@ function Application() {
                     onPause={onPause}
                     busy={busy}
                     notify={app.notify}
+                  />
+                ) : page === "instructions" ? (
+                  <AgentInstructions
+                    snapshot={snapshot}
+                    busy={busy}
+                    mutate={app.mutate}
+                    onDone={done}
+                    onRefresh={() => void app.refresh()}
                   />
                 ) : page === "discover" ? (
                   <Discover

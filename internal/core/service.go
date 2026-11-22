@@ -113,7 +113,7 @@ func isMutatingMethod(method string) bool {
 		"export_config", "preview_config", "import_config",
 		"sync", "save_server", "set_agents", "set_enabled",
 		"delete", "import", "install_skills", "install_server",
-		"update", "clear":
+		"update", "clear", "save_instruction", "delete_instruction":
 		return true
 	default:
 		return false
@@ -140,6 +140,8 @@ func (s *Service) dispatch(ctx context.Context, method string, params map[string
 		return s.hSetEnabled(params)
 	case "delete":
 		return s.hDelete(params)
+	case "instruction_content", "save_instruction", "delete_instruction":
+		return s.hInstruction(method, params)
 	case "import":
 		return s.hImport(params)
 	case "scan_skills":
