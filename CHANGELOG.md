@@ -61,4 +61,4 @@ Initial desktop release, built with mygo, React, and the siu Rust core.
 - Preserve unrelated Agent settings, back up existing configuration, and report actual synchronization failures for retry.
 - Package macOS, Windows, and Linux builds for x64 and ARM64, with platform-specific asset names and SHA-256 checksums.
 
-See [verification.md](docs/verification.md) for local validation and [GitHub Actions](https://github.com/nicholasxjy/siu-gui/actions/workflows/build.yml) for release build results.
+See [verification.md](docs/verification.md) for local validation and [GitHub Actions](https://github.com/nicholasxjy/siu-project/actions/workflows/build.yml) for release build results.

@@ -2,7 +2,7 @@
 
 在一个资源库里管理多个编码 Agent 的 MCP 服务和 Skills。桌面版用「资源 × Agent」矩阵查看分配与写入状态，终端版 `siu-tui` 可直接在 SSH 会话中使用。两者共用 Go 核心，并与上游 `siu` 共用本机资源库。 [上游 siu](https://github.com/nicholasxjy/siu)
 
-[下载与版本](https://github.com/nicholasxjy/siu-gui/releases/latest) · [更新记录](CHANGELOG.md)
+[下载与版本](https://github.com/nicholasxjy/siu-project/releases/latest) · [更新记录](CHANGELOG.md)
 
 ![Siu 桌面版的 MCP 资源库与 Agent 分配矩阵](docs/images/mcp-light.png)
 

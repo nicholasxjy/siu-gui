@@ -44,4 +44,4 @@ bun run test:online
 
 - **终端版** 解包后检查 `siu-tui` 或 `siu-tui.exe`、`LICENSE` 和 `THIRD_PARTY_LICENSES.txt`。运行 `--version` 核对版本，再在目标系统的终端或 SSH 中用隔离目录验证界面和资源写入。
 - **macOS 桌面版** 用 `codesign --verify --deep --strict` 检查 `Siu.app`，用 `hdiutil verify` 校验 DMG，用 `lipo -archs` 检查应用可执行文件的架构。需要验证原生对话框、WebView 和单实例行为时，直接启动对应的桌面包。
-- **CI** 在六个单架构目标及 macOS Universal runner 上构建。单架构任务会解包并执行终端程序的 `--version`，Linux x64 另运行浏览器 E2E。 [工作流](../.github/workflows/build.yml) · [运行记录](https://github.com/nicholasxjy/siu-gui/actions/workflows/build.yml)
+- **CI** 在六个单架构目标及 macOS Universal runner 上构建。单架构任务会解包并执行终端程序的 `--version`，Linux x64 另运行浏览器 E2E。 [工作流](../.github/workflows/build.yml) · [运行记录](https://github.com/nicholasxjy/siu-project/actions/workflows/build.yml)
