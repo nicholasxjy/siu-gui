@@ -393,7 +393,7 @@ export function SettingsPage({
                 <button
                   className="btn small"
                   onClick={() =>
-                    visit("https://github.com/nicholasxjy/siu-gui/releases")
+                    visit("https://github.com/nicholasxjy/siu-project/releases")
                   }
                 >
                   <Icon name="download" />
@@ -402,7 +402,7 @@ export function SettingsPage({
                 <button
                   className="btn small"
                   onClick={() =>
-                    visit("https://github.com/nicholasxjy/siu-gui")
+                    visit("https://github.com/nicholasxjy/siu-project")
                   }
                 >
                   <Icon name="external" />
