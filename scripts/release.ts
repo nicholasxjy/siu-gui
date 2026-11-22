@@ -1,6 +1,12 @@
-import { copyFile, mkdir, readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
-import { REPO_ROOT, parseArgs, parsePlatformEntry } from "./build";
+import { copyFile, lstat, mkdir, readFile, readdir } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
+import {
+  REPO_ROOT,
+  parseArgs,
+  parsePlatformEntry,
+  releaseTarget,
+  tuiArchivePath,
+} from "./build";
 
 export async function stageReleaseArtifacts(options: {
   platform: string;
@@ -11,12 +17,7 @@ export async function stageReleaseArtifacts(options: {
   const entry = parsePlatformEntry(options.platform);
   if (!/^\d+\.\d+\.\d+(?:-[\da-zA-Z.-]+)?$/.test(options.version))
     throw new Error("Invalid release version");
-  const os = entry.goos === "darwin" ? "macos" : entry.goos;
-  const arch = entry.universal
-    ? "universal"
-    : entry.goarch === "amd64"
-      ? "x64"
-      : entry.goarch;
+  const target = releaseTarget(entry);
   const extensions =
     entry.goos === "darwin"
       ? entry.universal
@@ -52,10 +53,26 @@ export async function stageReleaseArtifacts(options: {
       source: join(options.buildDirectory, candidates[0]!.name),
       target: join(
         options.outputDirectory,
-        "siu-gui_" + options.version + "_" + os + "_" + arch + suffix,
+        `siu-gui_${options.version}_${target}${suffix}`,
       ),
     };
   });
+  if (!entry.universal) {
+    const source = tuiArchivePath(
+      dirname(options.buildDirectory),
+      entry,
+      options.version,
+    );
+    const info = await lstat(source).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    if (!info?.isFile() || info.size === 0)
+      throw new Error(`Missing or empty standalone TUI archive: ${source}`);
+    plans.push({
+      source,
+      target: join(options.outputDirectory, basename(source)),
+    });
+  }
   await mkdir(options.outputDirectory, { recursive: true });
   for (const plan of plans) await copyFile(plan.source, plan.target);
   return plans.map((plan) => plan.target);

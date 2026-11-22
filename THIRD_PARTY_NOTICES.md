@@ -1,23 +1,18 @@
 # Third-party notices
 
-Siu GUI is licensed under the [MIT License](LICENSE). The distribution includes source or compiled components from the projects below.
+Siu is distributed under the MIT License. The desktop and terminal archives include the license texts for their dependencies in `THIRD_PARTY_LICENSES.txt`. This file is generated from the dependency tree and also includes the Go runtime and the bundled icon notices. [Siu license](LICENSE) · [Bundled notices](resources/THIRD_PARTY_LICENSES.txt)
 
-| Component                                                    | Version / revision                                                 | License             |
-| ------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------- |
-| [siu](https://github.com/nicholasxjy/siu)                    | `06333e8cbd6517b87bd918f351acf94fb678e20f`                         | MIT                 |
-| [mygo](https://github.com/egoist/mygo)                       | Go `b7f6946547d96c506a740f8c255069b93ba8cc06`; CLI/runtime `0.5.5` | MIT                 |
-| [React](https://github.com/facebook/react)                   | `19.3.1`                                                           | MIT                 |
-| [Lucide](https://github.com/lucide-icons/lucide)             | `0.577.0`                                                          | ISC                 |
-| [react-markdown](https://github.com/remarkjs/react-markdown) | `10.1.0`                                                           | MIT                 |
-| [purego](https://github.com/ebitengine/purego)               | pinned by `go.sum`                                                 | Apache-2.0          |
-| [junction](https://github.com/tesuji/junction)               | `2.1.0`                                                            | MIT                 |
-| [proxy-watch](https://github.com/gnoays/proxy-watch)         | `0.3.1`                                                            | MIT OR Apache-2.0   |
-| Go runtime and Rust dependencies                             | pinned by toolchains / lockfiles                                   | See bundled notices |
+| Component                                                                                                | Where it is used                                                                  | License    |
+| -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------- |
+| [siu](https://github.com/nicholasxjy/siu)                                                                | Upstream resource management and v1 backup format, ported into the shared Go core | MIT        |
+| [MyGO](https://github.com/egoist/mygo)                                                                   | Desktop window, WebView and bindings                                              | MIT        |
+| [React](https://github.com/facebook/react), [react-markdown](https://github.com/remarkjs/react-markdown) | Desktop interface and Markdown rendering                                          | MIT        |
+| [Lucide](https://github.com/lucide-icons/lucide)                                                         | Desktop interface icons                                                           | ISC        |
+| [tview](https://github.com/rivo/tview)                                                                   | Terminal widgets and layout                                                       | MIT        |
+| [tcell](https://github.com/gdamore/tcell)                                                                | Terminal input and rendering                                                      | Apache-2.0 |
 
-Agent SVGs are vendored in [resources/agents](resources/agents). Most come from [LobeHub Icons](https://github.com/lobehub/lobe-icons/tree/ea434b96e75813517b377825e01c0df61dee8836) at `ea434b96e75813517b377825e01c0df61dee8836` (MIT, copyright 2023 LobeHub); Pi uses its [official logo](https://pi.dev/logo-auto.svg) (MIT, copyright 2025 Mario Zechner). Their full notices are retained beside the assets and collected by `bun run licenses`. Droid uses the [official Factory favicon](https://factory.ai/favicon.svg). Brand names and logos belong to their respective owners and identify supported integrations. Exact source URLs, palette choices and modifications are recorded in [the icon source note](docs/agent-icons-research.md).
+The Go port retains the upstream siu license. The generator records the source revisions for the core port and the backup module. Dependency versions are recorded in the Go and Bun manifests and lockfiles. [Upstream license](internal/core/UPSTREAM_LICENSE) · [License generator](tools/licenses.ts) · [Go modules](go.mod) · [Bun lockfile](bun.lock)
 
-The vendored siu source retains its original license in [core/upstream/LICENSE](core/upstream/LICENSE). Its origin and modifications are documented in [core/UPSTREAM.md](core/UPSTREAM.md).
+Most Agent icons come from the pinned LobeHub Icons collection. Pi uses its official logo, and Droid uses the Factory favicon. The respective owners retain their names and marks. [Icon sources and attributions](docs/agent-icons-research.md)
 
-Full license text, notices and authorship records for the production frontend dependency tree, Go modules/runtime and Cargo dependencies are collected in [resources/THIRD_PARTY_LICENSES.txt](resources/THIRD_PARTY_LICENSES.txt), which is included as an application resource. Regenerate it with `bun run licenses` after dependency updates. The current report contains 233 component sections, covering Cargo dependencies reachable from the six supported desktop targets. Android/iOS-only dependencies are not distributed.
-
-Vite, TypeScript, Vitest, Testing Library, Prettier, agent-browser and the mygo CLI are development tools. Their package licenses remain with their installed distributions; they are not bundled as application code. The OS WebView engines are supplied by the host platform.
+Run `bun run licenses` after updating dependencies to refresh the bundled notices. [Build and distribution guide](docs/building.md)

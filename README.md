@@ -1,66 +1,60 @@
-# siu GUI
+# Siu
 
-[siu](https://github.com/nicholasxjy/siu) 的桌面界面，统一管理 coding agent 的 MCP 服务与 Skills。基于 [mygo](https://github.com/egoist/mygo)、React 和纯 Go 重写的 siu 核心，使用系统 WebView。
+在一个资源库里管理多个编码 Agent 的 MCP 服务和 Skills。桌面版用「资源 × Agent」矩阵查看分配与写入状态，终端版 `siu-tui` 可直接在 SSH 会话中使用。两者共用 Go 核心，并与上游 `siu` 共用本机资源库。 [上游 siu](https://github.com/nicholasxjy/siu)
 
-[下载安装包](https://github.com/nicholasxjy/siu-gui/releases/latest) · [更新记录](CHANGELOG.md)
+[下载与版本](https://github.com/nicholasxjy/siu-gui/releases/latest) · [更新记录](CHANGELOG.md)
 
-## Demo
-
-MCP 服务：通过「资源 × Agent」矩阵分配工具，查看配置与同步状态。
-
-![MCP 服务管理与 Agent 分配矩阵（浅色主题）](docs/images/mcp-light.png)
+![Siu 桌面版的 MCP 资源库与 Agent 分配矩阵](docs/images/mcp-light.png)
 
 <details>
-<summary>Skills 管理 · 深色主题</summary>
+<summary>Skills 管理界面</summary>
 
-![Skills 来源分组与 Agent 分配（深色主题）](docs/images/skills-dark.png)
+![Siu 桌面版的 Skills 资源库，按来源分组](docs/images/skills-dark.png)
 
 </details>
 
-截图使用隔离示例数据，由真实界面与 Go 后端运行生成。
+## 安装与启动
 
-## 功能
+按系统和 CPU 架构选择安装包。Intel Mac 选 `x64`，Apple Silicon 选 `arm64`。Windows 和 Linux 使用与机器架构对应的 `x64` 或 `arm64` 包。
 
-- **MCP 管理**：添加、编辑、导入、分配、暂停和更新服务，支持 stdio、HTTP、SSE。
-- **Skills 管理**：扫描 GitHub 仓库或本地目录，选择安装、按来源分组、预览 SKILL.md 并更新。
-- **配置迁移**：导出单个 JSON 文件，包含 MCP 配置、Skills 文件、启用状态、Agent 分配、代理设置和主题；在另一台机器导入后恢复。
-- **资源发现**：搜索 MCP Registry 与 skills.sh，按安装描述符填写配置，网络异常时提示缓存回退。
-- **本机集成**：检测 Agent、共享 siu CLI 资源库，支持深浅主题、系统或手动代理和原生文件夹选择。
+| 平台    | 桌面版 `siu-gui_…`                             | 终端版 `siu-tui_…`                    |
+| ------- | ---------------------------------------------- | ------------------------------------- |
+| macOS   | `.dmg`，另有 Universal DMG 和 ZIP              | `.tar.gz`，按架构选择                 |
+| Windows | `_setup.exe`                                   | `.zip`                                |
+| Linux   | `.deb` 或 `.tar.gz`，需 GTK 3 和 WebKitGTK 4.1 | `.tar.gz`，可在无图形界面的服务器运行 |
 
-支持 macOS、Windows、Linux 的 x64 / ARM64；macOS 另提供通用构建。平台依赖见[构建说明](docs/building.md)。
+终端包解压后，在包内运行 `./siu-tui`。Windows PowerShell 中运行 `.\siu-tui.exe`。如果发布页还没有对应的终端包，可从源码运行 `go run ./cmd/siu-tui`，或用 `bun run build:tui` 打包。 [构建说明](docs/building.md#终端版)
 
-## 使用说明
+## 管理 MCP 与 Skills
 
-- 资源库默认在 `~/.siu`，可用 `SIU_HOME` 指定。与 siu CLI 共用数据；启动和刷新会检测下述 `config.json` 自动恢复入口，其他情况只读取配置。
-- 修改配置前备份原文件并保留无关内容；同名未托管资源需明确导入。备份保存在资源库的 `backups/`。
-- 「已配置」表示配置写入成功，Agent 的重载与 MCP 运行状态由对应 Agent 决定。
-- 凭据预览默认遮蔽，本机配置文件仍保存实际值。网络策略可在「设置 → 网络」中切换并立即生效；Docker 镜像下载需另配 Docker 引擎代理。
+- **MCP** 支持 stdio、HTTP 和 SSE。可以手动配置、从 MCP Registry 搜索安装，或导入 Agent 中已有的服务。凭据在配置预览中默认遮蔽。
+- **Skills** 可从 GitHub 仓库、本地目录或 skills.sh 安装。扫描后按项选择、分配给 Agent，并查看已纳管的 `SKILL.md`。
+- **分配与同步** 支持 Claude Code、Codex、Gemini CLI、OpenCode、Cursor、Copilot CLI、Droid、Pi、Grok 和 Antigravity 等集成。应用按本机配置目录检测 Agent，并根据 Agent 能力提供分配选项。「已配置」表示写入成功。需要时在 Agent 内重载配置，写入失败可在 Siu 重试。
+- **设置** 可配置网络代理、导入导出备份和分类型清空资源。桌面版另提供用户级指令文件编辑，可管理 `AGENTS.md`、`CLAUDE.md` 等文件。
 
-### 导入和导出配置
+### 终端快捷键
 
-在「设置 → 配置迁移」点击「导出 JSON」，选择保存位置。将文件复制到另一台机器后，在桌面版同一位置点击「导入 JSON」，查看资源数量和提示，再确认恢复。与 siu 终端版使用同一份备份核心和 `siu-gui-backup` v1 格式，两端导出的文件可以互相导入；终端版使用 `E` 导出、`I` 恢复。桌面版导出还包含当前界面主题；终端版导出不包含主题，导入此类文件时保留桌面当前主题。
+| 操作                       | 按键                      |
+| -------------------------- | ------------------------- |
+| 切换 MCP、Skills 和设置    | `Tab` / `Shift+Tab`       |
+| 移动、打开、返回           | `↑` / `↓`、`Enter`、`Esc` |
+| 在资源首页添加、发现、筛选 | `A`、`D`、`/`             |
+| 切换勾选、继续             | `Space`、`Enter`          |
+| 确认删除、清空或恢复       | `Y`                       |
+| 在首页刷新、退出           | `R`、`Q`                  |
 
-也可以把导出的 JSON 直接保存或复制为 `~/.siu/config.json`（设置了 `SIU_HOME` 时为 `$SIU_HOME/config.json`）。桌面版与终端版启动或刷新时都会自动恢复，同样先备份当前资源库。导出文件本身不会写入恢复记录；只有默认文件恢复成功后才在 `config.applied.json` 记录摘要，两端共享该记录。相同文件不会重复恢复，也不会覆盖你之后在任一端的修改；替换文件内容后会再次应用。文件无效时会显示错误并保留现有配置，移除 `config.json` 不会撤销已恢复的资源。
+## 资源库与备份
 
-恢复会将 **siu 管理的全部 MCP 与 Skills 替换为备份状态**，包括启用/暂停和 Agent 分配，保留 Agent 中其他未纳管的条目。恢复前的资源库会自动备份为 `backups/config-*.json`，也可以用同一入口导入该文件。Skills 的文档、脚本和二进制资源直接包含在 JSON 中，恢复无需重新下载。导入会重建本机 Skills 链接，并适配配置中以原用户目录或资源库目录开头的路径。尚未安装的 Agent 保留分配，安装并启动后点击「重试写入」进行同步。
+资源库默认位于 `~/.siu`。可用 `SIU_HOME` 修改位置。桌面版、`siu-tui` 和上游 `siu` 共用库时，请一次只用一个客户端写入。已有的未纳管配置可从资源列表显式导入。
 
-JSON **包含明文 API 密钥、请求头和代理凭据**，请妥善保管。备份只迁移 siu 管理的资源定义与文件；MCP 需要的 Node/Python、Docker 镜像、外部脚本，以及 Agent 本身须在目标机器准备。原用户目录之外的绝对路径、不同操作系统的启动命令及本地代理地址可能需要手动调整。备份不包含 Agent 的其他独立设置。单个 JSON 最大 128 MiB，Skills 文件总大小最大 64 MiB、最多 20,000 个文件；不支持的文件路径和外部符号链接会明确报错。
+迁移时先导出 JSON，再到目标机器预览并确认导入。备份携带 MCP 凭据、Skills 文件、Agent 分配和代理设置。恢复会替换已纳管资源，并先保存当前配置的备份。 [备份、自动恢复与回滚](docs/backup.md)
 
-## 开发
+## 开发文档
 
-工具链与平台依赖见[构建说明](docs/building.md)。
-
-```sh
-bun install --frozen-lockfile
-bun run dev
-```
-
-`dev` 会启动 mygo 桌面窗口与 Vite 热更新；单独运行 `dev:web` 无法访问本机配置。`bun run build` 的产物位于 `build/<os>-<arch>/`。
-
-- [构建与分发](docs/building.md)：工具链、打包、签名与发布。
-- [验证指南](docs/verification.md)：测试命令、隔离环境与验证范围。
-- [接口协议](docs/protocol.md)：桌面 IPC、核心方法与数据结构。
+- [构建与分发](docs/building.md)
+- [测试与原生验证](docs/verification.md)
+- [Go 核心接口](docs/protocol.md)
 
 ## 许可
 
-[MIT](LICENSE)。第三方组件与上游许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+[MIT](LICENSE) · [第三方许可与来源](THIRD_PARTY_NOTICES.md)

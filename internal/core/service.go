@@ -20,6 +20,7 @@ type Service struct {
 	writeLock sync.Mutex
 	scans     *ScanManager
 	version   string
+	terminal  bool
 
 	marketMu    sync.Mutex
 	marketCache []MarketServer
@@ -34,6 +35,13 @@ func NewService(version string) *Service {
 		scans:   NewScanManager(),
 		version: version,
 	}
+}
+
+// NewTerminalService constructs a service that skips agent instructions, including in backups.
+func NewTerminalService(version string) *Service {
+	s := NewService(version)
+	s.terminal = true
+	return s
 }
 
 // Close releases any retained temporary scan directories.
@@ -141,7 +149,9 @@ func (s *Service) dispatch(ctx context.Context, method string, params map[string
 	case "delete":
 		return s.hDelete(params)
 	case "instruction_content", "save_instruction", "delete_instruction":
-		return s.hInstruction(method, params)
+		if !s.terminal {
+			return s.hInstruction(method, params)
+		}
 	case "import":
 		return s.hImport(params)
 	case "scan_skills":
@@ -160,9 +170,8 @@ func (s *Service) dispatch(ctx context.Context, method string, params map[string
 		return s.hUpdate(ctx, params)
 	case "clear":
 		return s.hClear(params)
-	default:
-		return nil, fmt.Errorf("unknown method %q", method)
 	}
+	return nil, fmt.Errorf("unknown method %q", method)
 }
 
 // ---- Param decoding helpers ----
@@ -282,7 +291,7 @@ func (s *Service) applyDefaultIfPending(resolved Resolved) (*AppliedConfig, []st
 	if err != nil {
 		return nil, nil, err
 	}
-	restored, err := ApplyDefaultBackup(store, resolved.Env.Home)
+	restored, err := applyDefaultBackup(store, resolved.Env.Home, s.terminal)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -313,7 +322,7 @@ func (s *Service) hSnapshot() (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	snap := BuildSnapshot(store, resolved.Env.Home, s.version)
+	snap := s.buildSnapshot(store, resolved.Env.Home)
 	snap.Issues = append(snap.Issues, autoIssues...)
 	snap.AutoConfig = applied
 	return snap, nil
@@ -343,7 +352,7 @@ func (s *Service) hConfig(method string, params map[string]json.RawMessage) (any
 			"skillCount": exported.Skills,
 		}, nil
 	case "preview_config":
-		prev, err := PreviewBackup(store, resolved.Env.Home, p)
+		prev, err := previewBackup(store, resolved.Env.Home, p, s.terminal)
 		if err != nil {
 			return nil, fmt.Errorf("无法预览配置备份: %w", err)
 		}
@@ -365,12 +374,12 @@ func (s *Service) hConfig(method string, params map[string]json.RawMessage) (any
 		if err != nil {
 			return nil, err
 		}
-		restored, err := ImportBackup(store, resolved.Env.Home, p, digest)
+		restored, err := importBackup(store, resolved.Env.Home, p, digest, s.terminal)
 		if err != nil {
 			return nil, fmt.Errorf("无法恢复配置备份: %w", err)
 		}
 		logMsg := fmt.Sprintf("恢复前的配置已备份到 %s", restored.Saved)
-		res := BuildMutationResult(store, resolved.Env.Home, s.version, restored.Report, "配置已恢复", &logMsg)
+		res := s.buildMutationResult(store, resolved.Env.Home, restored.Report, "配置已恢复", &logMsg)
 		res.Theme = restored.Theme
 		return res, nil
 	default:
@@ -388,7 +397,7 @@ func (s *Service) hSync() (any, error) {
 		return nil, err
 	}
 	pruneIfSafe(store, report)
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, "Synced", nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, "Synced", nil), nil
 }
 
 func (s *Service) hSaveServer(params map[string]json.RawMessage) (any, error) {
@@ -448,7 +457,7 @@ func (s *Service) hSaveServer(params map[string]json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, fmt.Sprintf("Saved %s", srv.Name), nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, fmt.Sprintf("Saved %s", srv.Name), nil), nil
 }
 
 func (s *Service) hSetAgents(params map[string]json.RawMessage) (any, error) {
@@ -500,7 +509,7 @@ func (s *Service) hSetAgents(params map[string]json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, "Updated agents", nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, "Updated agents", nil), nil
 }
 
 func (s *Service) hSetEnabled(params map[string]json.RawMessage) (any, error) {
@@ -548,7 +557,7 @@ func (s *Service) hSetEnabled(params map[string]json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, "Updated", nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, "Updated", nil), nil
 }
 
 func (s *Service) hDelete(params map[string]json.RawMessage) (any, error) {
@@ -583,7 +592,7 @@ func (s *Service) hDelete(params map[string]json.RawMessage) (any, error) {
 	if kind == "skills" {
 		pruneIfSafe(store, report)
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, fmt.Sprintf("Deleted %s", name), nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, fmt.Sprintf("Deleted %s", name), nil), nil
 }
 
 func (s *Service) hImport(params map[string]json.RawMessage) (any, error) {
@@ -637,7 +646,7 @@ func (s *Service) hImport(params map[string]json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, fmt.Sprintf("Imported %s", name), nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, fmt.Sprintf("Imported %s", name), nil), nil
 }
 
 func (s *Service) hScanSkills(ctx context.Context, params map[string]json.RawMessage) (any, error) {
@@ -771,7 +780,7 @@ func (s *Service) hInstallSkills(params map[string]json.RawMessage) (any, error)
 	if err != nil {
 		return nil, err
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, fmt.Sprintf("Installed %s", strings.Join(names, ", ")), nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, fmt.Sprintf("Installed %s", strings.Join(names, ", ")), nil), nil
 }
 
 func (s *Service) hReleaseScan(params map[string]json.RawMessage) (any, error) {
@@ -1016,7 +1025,7 @@ func (s *Service) hInstallServer(params map[string]json.RawMessage) (any, error)
 	if err != nil {
 		return nil, err
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, fmt.Sprintf("Installed %s", server.Name), nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, fmt.Sprintf("Installed %s", server.Name), nil), nil
 }
 
 func (s *Service) hUpdate(ctx context.Context, params map[string]json.RawMessage) (any, error) {
@@ -1083,7 +1092,7 @@ func (s *Service) hUpdate(ctx context.Context, params map[string]json.RawMessage
 	}
 
 	report := Report{Changed: 0, Issues: issues}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, "Updated", &logText), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, "Updated", &logText), nil
 }
 
 func (s *Service) hClear(params map[string]json.RawMessage) (any, error) {
@@ -1134,5 +1143,5 @@ func (s *Service) hClear(params map[string]json.RawMessage) (any, error) {
 	default:
 		msg = fmt.Sprintf("Cleared %d %s entries", len(names), kind)
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, report, msg, nil), nil
+	return s.buildMutationResult(store, resolved.Env.Home, report, msg, nil), nil
 }

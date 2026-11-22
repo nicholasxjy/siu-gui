@@ -1,68 +1,47 @@
-# 验证指南
+# 测试与原生验证
 
-## 常规检查命令
+## 常规检查
+
+在仓库根目录运行。前端检查需要先执行 `bun install --frozen-lockfile`。 [工具链与平台依赖](building.md)
+
+| 命令                                 | 覆盖范围                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| `go test -race ./...`                | Go 核心、桌面绑定、终端交互和测试服务。Windows ARM64 使用 `go test ./...`。       |
+| `go test -race ./cmd/siu-tui`        | 在模拟终端中发送按键，验证 MCP 表单与凭据遮蔽、Skill 扫描与安装、备份确认和恢复。 |
+| `go test ./internal/core`            | MCP 配置读写、Skills 链接、代理、发现缓存、指令文件、备份兼容与回滚。             |
+| `bun run typecheck` / `bun run test` | TypeScript 类型和桌面界面的组件与行为。                                           |
+| `bun run test:build`                 | 平台参数、独立终端包、发布命名与归集。                                            |
+| `bun run build:web`                  | 生产前端构建。                                                                    |
+
+Go 备份兼容样例位于 [internal/core/testdata/siu-backup-v1.json](../internal/core/testdata/siu-backup-v1.json)。测试覆盖上游导出的 v1 数据、路径映射、自动恢复摘要和 TUI 对指令文件的隔离。
+
+## 用隔离目录手动验证
+
+使用独立的绝对路径作为 `SIU_GUI_TEST_HOME`。共享核心会在其中查找 Agent 配置，并将资源库放在该目录下的 `.siu`，忽略日常的 `SIU_HOME` 和 Agent 路径环境变量。下面的示例预建一个 Claude Code 测试目录，可用于验证分配和实际写入。
 
 ```sh
-bun run typecheck
-bun run test
-bun run test:build
-go test -race ./...
-bun run build:web
+siu_test_home="$(mktemp -d)"
+mkdir -p "$siu_test_home/.claude"
+SIU_GUI_TEST_HOME="$siu_test_home" go run ./cmd/siu-tui
 ```
 
-依次检查 TypeScript、前端、构建与发布脚本、Go 核心与桌面测试（含竞态）和生产前端构建。Windows ARM64 使用 `go test ./...`。
+也可以在解压目录用 `SIU_GUI_TEST_HOME="$siu_test_home" ./siu-tui` 测试发行包。桌面版使用相同环境变量，例如 `SIU_GUI_TEST_HOME="$siu_test_home" ./build/darwin-arm64/Siu.app/Contents/MacOS/Siu`。若要验证桌面版和终端版共用资源库，先退出第一个客户端，再用同一路径启动第二个。
 
-## 隔离路径
-
-E2E 和联网测试脚本均自动创建临时隔离目录。手动测试配置读写时，必须将 `SIU_GUI_TEST_HOME` 设为不同于日常 HOME 的绝对路径；该模式会忽略指向真实 Agent 配置的路径覆盖。原生应用可在新隔离目录中启动：
+## 浏览器与联网测试
 
 ```sh
-SIU_GUI_TEST_HOME="$(mktemp -d)" ./build/darwin-universal/Siu.app/Contents/MacOS/Siu
-```
-
-Go 单元测试使用等价的 `EnvRooted(tempdir)`。
-
-## E2E 运行前提
-
-```sh
-bun install --frozen-lockfile
 bunx agent-browser install
 bun run test:e2e
+bun run test:online
 ```
 
-E2E 脚本构建测试服务（`cmd/testhost`），绑定 `127.0.0.1:47832`；以 `SIU_GUI_BROWSER_TEST=1` 启动 Vite（`127.0.0.1:5173`），完成后关闭服务和浏览器。可通过 `AGENT_BROWSER_BIN` 替换浏览器 CLI。
+- **浏览器 E2E** 通过 `agent-browser` 驱动 React 界面，并调用独立的 Go 测试服务。用例覆盖资源工作流、部分键盘与无障碍交互、备份和主题。原生文件选择器由测试入口代替，配置文件读写走真实 Go 核心。可用 `AGENT_BROWSER_BIN` 指定浏览器 CLI。Vite 使用 `127.0.0.1:5173`，测试服务使用 `127.0.0.1:47832`。
+- **联网测试** 使用同一个 Go 测试服务，覆盖官方 MCP Registry、缓存后离线安装、skills.sh、GitHub Skill、代理设置和 npm / PyPI 版本查询。运行时需要访问外网，并占用 `127.0.0.1:47832`。
 
-`bun run test:online` 需要外网。
+两个脚本都会创建隔离测试目录。浏览器记录、截图和无障碍报告在 `.artifacts/e2e/`，联网结果在 `.artifacts/online/result.json`。
 
-## macOS 原生验证命令
+## 发布包验证
 
-```sh
-codesign --verify --deep --strict <path>/Siu.app
-hdiutil verify <path>/Siu.dmg
-lipo -archs <path>/Siu.app/Contents/MacOS/Siu
-```
-
-## 已验证范围
-
-E2E 覆盖：真实界面与 Go/Rust 后端、MCP 全生命周期（添加/分配/暂停/重命名/删除）、Skills 扫描/安装/更新/删除、JSON 配置导出/预览/恢复、主题切换、键盘导航、基本可访问性（axe）、隔离写入与错误处理。JSON 迁移用例只替代 Chromium 无法调用的原生文件选择器，文件保存、预览校验和恢复使用真实后端。
-
-配置迁移的 Rust 测试另覆盖两个隔离用户目录之间的恢复、二进制和脚本权限、暂停状态、Agent 分配、路径重映射、未托管资源保护、预览后文件变更、非法路径及失败回滚。`config.json` 自动恢复测试覆盖首次应用、跨进程去重、内容变化后重新应用、无效文件保护、识别终端版无主题恢复记录，导出默认文件不会提前标记为已恢复，以及恢复记录写入失败时保留结果并允许重试。固定样例 `core/tests/fixtures/siu-backup-v1.json` 由 siu `1a3a7ef` 的原始导出代码生成，验证无主题 CLI 备份、二进制文件、脚本权限、路径映射和 GUI 再导出；前端验证导入无主题备份保留当前选择。符号链接用户目录测试还验证尚不存在的 Agent 配置不会被导出覆盖。E2E 另验证放入默认路径后刷新恢复与主题只应用一次。原生文件选择器的外观和交互仍需在各平台桌面环境验证。
-
-联网测试覆盖：官方 MCP Registry 搜索与离线缓存、skills.sh、GitHub Skill 扫描/安装/更新/删除；代理测试另覆盖 HTTP CONNECT、SOCKS5、系统代理切换及联网 MCP 版本探针。
-
-此前在 macOS / Apple Silicon 上完成 Rust/Go 编译、单元/协议/浏览器测试、macOS ARM64 与通用包的构建、签名及镜像校验，并从只读 DMG 验证原生窗口、IPC、单实例和正常退出。
-
-Intel 硬件运行、Windows/Linux 原生运行与安装器、Windows junction、各平台系统代理及 PAC/WPAD 的覆盖以对应环境的实际验证结果为准。
-
-## 结果与截图
-
-自动测试记录保存在 `.artifacts/`（不进入版本库）：
-
-- `e2e/result.json`、界面截图及当前页面的 `a11y.json`。
-- `online/result.json`：外部来源检查结果。
-
-原生窗口、包签名和其他手动验证的记录可另存于此。README 展示用截图保存在 [`docs/images/`](images/)，使用隔离示例数据。axe 检查仅覆盖当时页面，不能代替全量或人工验证。
-
-## 各平台 CI
-
-[build.yml](../.github/workflows/build.yml) 为六个目标配置了原生 runner；Linux x64 另执行浏览器 E2E。发布工作流结果见 [GitHub Actions](https://github.com/nicholasxjy/siu-gui/actions/workflows/build.yml)，以各次发布 CI 的实际执行结果为准。
+- **终端版** 解包后检查 `siu-tui` 或 `siu-tui.exe`、`LICENSE` 和 `THIRD_PARTY_LICENSES.txt`。运行 `--version` 核对版本，再在目标系统的终端或 SSH 中用隔离目录验证界面和资源写入。
+- **macOS 桌面版** 用 `codesign --verify --deep --strict` 检查 `Siu.app`，用 `hdiutil verify` 校验 DMG，用 `lipo -archs` 检查应用可执行文件的架构。需要验证原生对话框、WebView 和单实例行为时，直接启动对应的桌面包。
+- **CI** 在六个单架构目标及 macOS Universal runner 上构建。单架构任务会解包并执行终端程序的 `--version`，Linux x64 另运行浏览器 E2E。 [工作流](../.github/workflows/build.yml) · [运行记录](https://github.com/nicholasxjy/siu-gui/actions/workflows/build.yml)

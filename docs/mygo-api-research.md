@@ -1,5 +1,7 @@
 # MyGO 0.8.3 API review
 
+This is a historical review of the MyGO 0.8.3 upgrade and the desktop architecture at that time. The current desktop integration uses the in-process Go core. [Current build guide](building.md) · [Core protocol](protocol.md)
+
 Checked on **2026-11-07 UTC** against the official repository, npm registry and Go module proxy. This report describes stable **v0.8.3**, commit **`5add3817c74bb7505d0b473bc5fb28abe2201b99`**. Dependency changes and observed verification results are recorded in [dependency-upgrade.md](dependency-upgrade.md).
 
 ## Version alignment

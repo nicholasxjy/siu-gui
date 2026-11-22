@@ -202,7 +202,7 @@ type SnapshotDTO struct {
 	Platform     string                `json:"platform"`
 	Version      string                `json:"version"`
 	Agents       []AgentDTO            `json:"agents"`
-	Instructions []AgentInstructionDTO `json:"instructions"`
+	Instructions []AgentInstructionDTO `json:"instructions,omitzero"`
 	MCP          []McpEntryDTO         `json:"mcp"`
 	Skills       []SkillEntryDTO       `json:"skills"`
 	FoundMCP     []FoundMcpDTO         `json:"foundMcp"`
@@ -296,6 +296,14 @@ func EncodeScanResultDTO(token, source string, found []FoundSkillFile, store *St
 
 // BuildSnapshot constructs SnapshotDTO with observed states and issues.
 func BuildSnapshot(store *Store, home, version string) SnapshotDTO {
+	return buildSnapshot(store, home, version, true)
+}
+
+func (s *Service) buildSnapshot(store *Store, home string) SnapshotDTO {
+	return buildSnapshot(store, home, s.version, !s.terminal)
+}
+
+func buildSnapshot(store *Store, home, version string, includeInstructions bool) SnapshotDTO {
 	issues := []string{}
 	mcpList := make([]McpEntryDTO, 0, len(store.Lib.MCP))
 	for i := range store.Lib.MCP {
@@ -347,13 +355,17 @@ func BuildSnapshot(store *Store, home, version string) SnapshotDTO {
 			issues = append(issues, fmt.Sprintf("%s: cannot read MCP configuration at %s", agent.Name, agent.MCP.Path))
 		}
 	}
+	var instructions []AgentInstructionDTO
+	if includeInstructions {
+		instructions = listAgentInstructions(store.Agents, store.env)
+	}
 	return SnapshotDTO{
 		Home:         home,
 		Root:         store.Root,
 		Platform:     platformName(),
 		Version:      version,
 		Agents:       agents,
-		Instructions: listAgentInstructions(store.Agents, store.env),
+		Instructions: instructions,
 		MCP:          mcpList,
 		Skills:       skillList,
 		FoundMCP:     foundMCP,
@@ -364,7 +376,14 @@ func BuildSnapshot(store *Store, home, version string) SnapshotDTO {
 
 // BuildMutationResult builds MutationResultDTO merging report issues and observed snapshot issues.
 func BuildMutationResult(store *Store, home, version string, report Report, message string, logText *string) MutationResultDTO {
-	snap := BuildSnapshot(store, home, version)
+	return buildMutationResult(BuildSnapshot(store, home, version), report, message, logText)
+}
+
+func (s *Service) buildMutationResult(store *Store, home string, report Report, message string, logText *string) MutationResultDTO {
+	return buildMutationResult(s.buildSnapshot(store, home), report, message, logText)
+}
+
+func buildMutationResult(snap SnapshotDTO, report Report, message string, logText *string) MutationResultDTO {
 	issues := append([]string{}, report.Issues...)
 	seen := map[string]bool{}
 	for _, iss := range issues {

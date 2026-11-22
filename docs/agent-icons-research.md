@@ -1,6 +1,6 @@
 # Agent icon sources
 
-Checked 2026-11-08 against official sites and the [LobeHub Icons repository](https://github.com/lobehub/lobe-icons). The app uses recognizable product marks for its existing agents; this is not a quantitative popularity ranking. SVGs are bundled locally in `resources/agents`, with no runtime CDN or added dependency.
+Checked 2026-11-08 against official sites and the [LobeHub Icons repository](https://github.com/lobehub/lobe-icons). The desktop UI uses recognizable product marks to identify Agent integrations. SVGs are bundled locally in `resources/agents`.
 
 LobeHub assets are pinned to [`ea434b96e75813517b377825e01c0df61dee8836`](https://github.com/lobehub/lobe-icons/tree/ea434b96e75813517b377825e01c0df61dee8836/packages/static-svg/icons). The following filenames refer to that revision's `packages/static-svg/icons/` directory unless an official URL is given.
 
@@ -30,4 +30,4 @@ LobeHub assets are pinned to [`ea434b96e75813517b377825e01c0df61dee8836`](https:
 
 ## Attribution
 
-[LobeHub's MIT notice](https://raw.githubusercontent.com/lobehub/lobe-icons/ea434b96e75813517b377825e01c0df61dee8836/LICENSE) and [Pi's MIT notice](https://raw.githubusercontent.com/earendil-works/pi/main/LICENSE) are retained as `resources/agents/LICENSE.lobehub` and `LICENSE.pi`, and included by `tools/licenses.ts`. Factory's favicon remains an official brand asset; public availability does not establish an open-source logo license. Brand names and logos belong to their respective owners and are used to identify integrations.
+[LobeHub's MIT notice](https://raw.githubusercontent.com/lobehub/lobe-icons/ea434b96e75813517b377825e01c0df61dee8836/LICENSE) and [Pi's MIT notice](https://raw.githubusercontent.com/earendil-works/pi/main/LICENSE) are retained as `resources/agents/LICENSE.lobehub` and `resources/agents/LICENSE.pi`, and included by `tools/licenses.ts`. Factory's favicon remains an official brand asset; public availability does not establish an open-source logo license. Brand names and logos belong to their respective owners and are used to identify integrations.

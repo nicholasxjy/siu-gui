@@ -412,15 +412,22 @@ func validateBackup(b *portableBackup) error {
 	return nil
 }
 
-func loadBackupFile(path string) (*portableBackup, string, error) {
+func loadBackupFile(path string, ignoreInstructions bool) (*portableBackup, string, error) {
 	raw, err := readBounded(path, MaxBackupBytes)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %w", path, err)
 	}
 	var b portableBackup
+	var target any = &b
+	if ignoreInstructions {
+		target = &struct {
+			*portableBackup
+			Instructions json.RawMessage `json:"instructions"`
+		}{portableBackup: &b}
+	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&b); err != nil {
+	if err := dec.Decode(target); err != nil {
 		return nil, "", fmt.Errorf("%s isn't a siu backup", path)
 	}
 	if err := validateBackup(&b); err != nil {
@@ -646,7 +653,11 @@ func writeSyncedFile(target string, data []byte) error {
 
 // PreviewBackup validates a backup file and checks destination collisions without mutating disk.
 func PreviewBackup(store *Store, home, path string) (BackupPreview, error) {
-	b, digest, err := loadBackupFile(path)
+	return previewBackup(store, home, path, false)
+}
+
+func previewBackup(store *Store, home, path string, ignoreInstructions bool) (BackupPreview, error) {
+	b, digest, err := loadBackupFile(path, ignoreInstructions)
 	if err != nil {
 		return BackupPreview{}, err
 	}
@@ -689,7 +700,11 @@ func restoreOptionalFile(path string, data []byte, existed bool) error {
 // ImportBackup replaces all managed resources with the backup's desired state,
 // verifying expectedDigest, taking a safety backup first, and rolling back on local failure.
 func ImportBackup(store *Store, home, path, expectedDigest string) (RestoredBackup, error) {
-	b, actual, err := loadBackupFile(path)
+	return importBackup(store, home, path, expectedDigest, false)
+}
+
+func importBackup(store *Store, home, path, expectedDigest string, ignoreInstructions bool) (RestoredBackup, error) {
+	b, actual, err := loadBackupFile(path, ignoreInstructions)
 	if err != nil {
 		return RestoredBackup{}, err
 	}
@@ -944,6 +959,10 @@ func ReadAppliedConfig(root string) (*AppliedConfig, error) {
 
 // ApplyDefaultBackup restores root/config.json if present and different from config.applied.json.
 func ApplyDefaultBackup(store *Store, home string) (*RestoredBackup, error) {
+	return applyDefaultBackup(store, home, false)
+}
+
+func applyDefaultBackup(store *Store, home string, ignoreInstructions bool) (*RestoredBackup, error) {
 	path := filepath.Join(store.Root, "config.json")
 	raw, err := readBounded(path, MaxBackupBytes)
 	if err != nil {
@@ -960,7 +979,7 @@ func ApplyDefaultBackup(store *Store, home string) (*RestoredBackup, error) {
 	if applied != nil && applied.Digest == d {
 		return nil, nil
 	}
-	restored, err := ImportBackup(store, home, path, d)
+	restored, err := importBackup(store, home, path, d, ignoreInstructions)
 	if err != nil {
 		return nil, err
 	}

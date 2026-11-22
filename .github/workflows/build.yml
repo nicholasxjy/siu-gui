@@ -54,7 +54,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-0 libwebkit2gtk-4.1-0 fonts-noto-cjk
+          sudo apt-get install -y libgtk-3-0 libwebkit2gtk-4.1-0 fonts-noto-cjk libarchive-tools
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test
@@ -67,6 +67,40 @@ jobs:
         run: go test ./...
       - run: bun run build --platform ${{ matrix.platform }}
       - run: bun scripts/release.ts --platform ${{ matrix.platform }}
+      - name: Verify macOS and Linux terminal archive
+        if: runner.os != 'Windows' && matrix.platform != 'darwin/universal'
+        shell: bash
+        run: |
+          shopt -s nullglob
+          archives=(release-assets/siu-tui_*.tar.gz)
+          test "${#archives[@]}" -eq 1
+          work=$(mktemp -d)
+          trap 'rm -rf "$work"' EXIT
+          tar -xf "${archives[0]}" -C "$work"
+          test -x "$work/siu-tui"
+          test -s "$work/LICENSE"
+          test -s "$work/THIRD_PARTY_LICENSES.txt"
+          version=$(bun -p 'require("./package.json").version')
+          reported=$("$work/siu-tui" --version)
+          test "$reported" = "siu-tui $version"
+      - name: Verify Windows terminal archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archives = @(Get-ChildItem release-assets -Filter 'siu-tui_*.zip' -File)
+          if ($archives.Count -ne 1) { throw 'Expected one terminal ZIP' }
+          $work = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP 'siu-tui')
+          Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath $work.FullName
+          foreach ($name in @('siu-tui.exe', 'LICENSE', 'THIRD_PARTY_LICENSES.txt')) {
+            $file = Get-Item -LiteralPath (Join-Path $work.FullName $name)
+            if ($file -isnot [IO.FileInfo] -or $file.Length -eq 0) {
+              throw "Invalid archive entry $name"
+            }
+          }
+          $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          $reported = & (Join-Path $work.FullName 'siu-tui.exe') --version
+          if ($LASTEXITCODE -ne 0) { throw "siu-tui.exe exited with code $LASTEXITCODE" }
+          if ($reported -cne "siu-tui $version") { throw "Unexpected version: $reported" }
       - name: Real backend browser checks
         if: matrix.platform == 'linux/amd64'
         run: |
@@ -95,14 +129,18 @@ jobs:
           pattern: siu-*
           path: artifacts
       - name: Collect packages and checksums
+        shell: bash
         run: |
           mkdir release-assets
-          find artifacts -path '*/release-assets/*' -type f -exec cp {} release-assets/ \;
+          cp artifacts/siu-*/release-assets/* release-assets/
           version=${GITHUB_REF_NAME#v}
           for suffix in macos_arm64.dmg macos_x64.dmg macos_universal.dmg macos_universal.zip windows_x64_setup.exe windows_arm64_setup.exe linux_x64.deb linux_x64.tar.gz linux_arm64.deb linux_arm64.tar.gz; do
             test -s "release-assets/siu-gui_${version}_${suffix}"
           done
-          test "$(find release-assets -type f | wc -l)" -eq 10
+          for suffix in macos_arm64.tar.gz macos_x64.tar.gz windows_x64.zip windows_arm64.zip linux_x64.tar.gz linux_arm64.tar.gz; do
+            test -s "release-assets/siu-tui_${version}_${suffix}"
+          done
+          test "$(find release-assets -type f | wc -l)" -eq 16
           (cd release-assets && sha256sum *) > SHA256SUMS.txt
           mv SHA256SUMS.txt release-assets/
       - uses: softprops/action-gh-release@v2

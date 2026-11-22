@@ -1,67 +1,93 @@
-# Desktop / core protocol
+# Go core protocol
 
-The Go mygo service exposes `Request(payload: string): Promise<string>`. Both strings contain JSON; the frontend owns the typed DTOs below. `Desktop.Request` dispatches directly to the in-process Go core (`internal/core`). Each request contains `method`, object `params`, and an optional `id`. Responses echo `id` when present and contain either `{ok:true,data}` or `{ok:false,error:string}`. Methods must validate all input, including unknown names and unsupported Agent targets. All mutations are serialized and reopen the existing siu library before applying changes so refresh observes CLI changes. Startup and snapshot ordinarily read only. An explicitly supplied `<library root>/config.json` is the exception: a new or changed portable backup automatically restores before the snapshot, under the mutation lock and with a safety backup.
+The desktop and terminal apps call `internal/core` in-process. The desktop uses the generated mygo `Desktop.request` binding, which passes JSON strings through `Desktop.Request`. `cmd/siu-tui` calls `Service.Request` directly with the same envelopes. `cmd/testhost` exposes a loopback adapter for browser tests. [Core service](../internal/core/service.go) · [Desktop binding](../desktop.go) · [Test adapter](../cmd/testhost/main.go)
 
-## DTOs
+## Request and response
 
-Use camelCase for new DTO keys. Existing siu MCP/Skill entries keep upstream serde field names.
+Send a JSON object containing a `method`, an optional `params` object, and an optional `id`. Missing `params` defaults to an empty object. Responses echo the `id` if supplied.
 
-`Server`: `{name,transport:"stdio"|"http"|"sse",command:string,args:string[],env:Record<string,string>,url:string,headers:Record<string,string>}`. Missing optional string/maps/array keys in existing libraries should be serialized with empty defaults for frontend convenience.
+```json
+{
+  "id": 1,
+  "method": "set_enabled",
+  "params": { "kind": "skills", "name": "example", "enabled": false }
+}
+```
 
-`Agent`: `{id,name,home,mcpPath:string|null,skillsPath:string|null,detected:boolean,transports:string[]}`. Return all known Agents so the UI can explain detection. Only detected compatible Agents may be selected, except shared Skills target `agents`, which can be deliberately selected even if its directory does not exist yet. Shared directory is not an MCP target.
+Success is `{ok:true,data}`. Invalid input and operation errors use `{ok:false,error:string}`. A mutation can succeed in saving desired state while individual Agent writes fail. Read `report.issues` and the returned `snapshot` before reporting completion.
 
-`Snapshot`: `{home,root,platform,version,agents:Agent[],instructions:AgentInstruction[],mcp:McpEntry[],skills:SkillEntry[],foundMcp:FoundMcp[],foundSkills:FoundSkill[],issues:string[],autoConfig?:{digest:string,theme?:string}}`. `autoConfig` identifies the default config backup already applied on this machine; the frontend applies its theme once per root/digest and remembers that choice, preserving later theme changes.
+Each service instance serializes write operations. Writes reopen the library to pick up changes already saved by another client. Use one writer at a time across processes. `snapshot` also checks whether a changed `config.json` needs to be restored under the service lock. Keep one service alive across related discovery and installation calls so it can retain scan tokens and MCP descriptors.
 
-`AgentInstruction` uses `{id:string,agent:string,name:string,path:string,status:"available"|"missing"|"unavailable",issue?:string}`. Each entry identifies a user-level Markdown file for a detected Agent. The snapshot carries file metadata. The editor fetches contents separately.
+## Shared data shapes
 
-`McpEntry`: `Server & {agents:string[],enabled:boolean,origin?:string,states:Record<string,string>}`. `SkillEntry`: upstream `{name,description,source:null|{kind:"github",repo,ref,path}|{kind:"local",dir},agents,enabled,hash,installed,updated}` plus `states`. States are `on`, `off`, `paused`, `error`, or `unsupported:<reason>`. `on` means successfully configured, never runtime health. Inspect the Agent's actual parsed MCP definition / Skills link plus library applied record to avoid false success after partial sync failures. Include useful problems in `Snapshot.issues`.
+The exact JSON fields and serialization are defined in Go. [DTO definitions](../internal/core/protocol.go)
 
-`FoundMcp`: `{server:Server,agents:string[]}`. `FoundSkill`: `{name,description,at:{agent:string,path:string}[]}`.
+| Type                     | Fields and behavior                                                                                                                                                                                                                 |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Snapshot`               | `home`, `root`, `platform`, `version`, `agents`, `mcp`, `skills`, `foundMcp`, `foundSkills`, `issues`, optional `autoConfig` (`digest`, optional `theme`). The desktop also receives `instructions`.                                |
+| `Agent`                  | `id`, `name`, `home`, nullable `mcpPath` and `skillsPath`, `detected`, and `transports`. Assignment requires a detected, compatible Agent. The shared `agents` Skills target can be selected before its directory exists.           |
+| `Server`                 | `name`, `transport` (`stdio`, `http`, `sse`), `command`, `args`, `env`, `url`, and `headers`. Responses normalize empty arrays and maps. Core responses provide real configuration values. Clients redact credentials for previews. |
+| `McpEntry`               | `Server` fields plus `agents`, `enabled`, nullable `origin` and `states` by Agent ID.                                                                                                                                               |
+| `SkillEntry`             | `name`, `description`, `source`, `agents`, `enabled`, `hash`, `installed`, `updated` and `states` by Agent ID. `source` is `null`, `{kind:"github",repo,ref,path}`, or `{kind:"local",dir}`.                                        |
+| `FoundMcp`, `FoundSkill` | `{server:Server,agents:string[]}` and `{name,description,at:{agent,path}[]}` describe unmanaged resources found in Agent configurations.                                                                                            |
+| `MutationResult`         | `{snapshot:Snapshot,report:{changed:number,issues:string[]},message:string,log?:string,theme?:string}`. The import operation may return `theme`.                                                                                    |
 
-`MutationResult`: `{snapshot:Snapshot,report:{changed:number,issues:string[]},message:string,log?:string}`. Failed individual writes return a result with issues and actual state, not an all-success toast. Library parse / invalid input errors use `{ok:false,error}`. Network update failures may be returned as report issues with log.
+Per-Agent states are `on`, `off`, `paused`, `error`, or `unsupported:<reason>`. `on` confirms configuration on disk. Agent reload and MCP runtime health are handled by each Agent. Client errors and issues may include paths from the local machine.
 
-`MarketInput`: `{key,place:"env"|"header"|"arg",label,hint,secret:boolean,required:boolean,format:string}`. `MarketServer`: `{id,title,description,publisher,homepage,server:Server,inputs:MarketInput[],featured:boolean}`. `MarketSkill`: upstream serialized `{source,skillId,name,installs,isOfficial}`.
+## Resource library
 
-`ProxySettings`: `{mode:"system"|"custom"|"direct",url:string,noProxy:string}`. Missing configuration defaults to `system`, empty URL and bypass list. `custom` accepts HTTP/HTTPS/SOCKS5/SOCKS5H URLs, including percent-encoded authentication, and a comma-separated hostname/IP/CIDR bypass list. Settings are stored separately in `<library root>/proxy.json`, using atomic writes and user-only Unix file permissions. Credentials are returned only by these explicit settings methods, never in snapshots or validation errors.
+`kind` is `mcp` or `skills`. Unless listed otherwise, these mutations return `MutationResult`.
 
-`ScanResult`: `{token:string,source:string,skills:{name,description,path:string,installed:boolean}[]}`. A scan token owns a TempDir for downloaded GitHub sources (or a canonical local directory); retain it across calls, expire unused tokens after 30 minutes, cap at 8 retained scans and explain expired token errors. The install operation must use this retained scan instead of accepting arbitrary source paths from the frontend.
+| Method and params                              | Behavior                                                                                                                                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `snapshot {}`                                  | Read the library, unmanaged resources and observed Agent state. Apply new default backups as described below. Returns `Snapshot`.                                               |
+| `save_server {server,agents,oldName?,origin?}` | Add or edit a server. `oldName` selects the entry to edit and allows renaming it. Editing retains the enabled state. The operation rejects unrelated unmanaged name collisions. |
+| `set_agents {kind,name,agents}`                | Update assignments and retain the enabled state.                                                                                                                                |
+| `set_enabled {kind,name,enabled}`              | Enable or pause a resource and retain its assignments.                                                                                                                          |
+| `import {kind,name}`                           | Rescan unmanaged entries and bring the named resource into the library.                                                                                                         |
+| `delete {kind,name}` / `clear {kind}`          | Remove one resource or all managed resources of a kind. Retract Siu-owned assignments and retain unmanaged resources and backups.                                               |
+| `sync {}`                                      | Retry writing the current desired state to Agent configurations.                                                                                                                |
+| `update {kind,name?}`                          | Update one resource, or all resources of that kind when `name` is omitted. Consult `report.issues` and `log` for individual failures.                                           |
 
-## Methods and params
+### Discovery and Skills
 
-- `snapshot {}` -> Snapshot. Detect `<library root>/config.json` (the same versioned JSON as export), validate and automatically restore changed contents with the existing import protections. Persist the successful digest and theme in `config.applied.json`; identical contents never re-import, including after restart, and partial Agent writes can be retried with `sync`. A bad file contributes a Snapshot issue while preserving existing resources. Removing the file leaves restored resources in place. The default config path is also a permitted export destination; exporting does not mark it applied. The receipt is shared with the siu CLI, so a restore by either application prevents a duplicate restore in the other. Snapshot uses the 3-minute desktop timeout to accommodate restoration.
-- `proxy_settings {}` -> ProxySettings. Read saved policy, without contacting the network.
-- `set_proxy_settings {proxy:ProxySettings}` -> ProxySettings. Validate and atomically save policy without changing library entries or Agent configuration. Subsequent downloads and redirects re-evaluate routing; in-flight downloads retain their saved policy. Invalid settings do not replace the previous file. `system` resolves native OS proxies (including native PAC/WPAD on macOS/Windows) and environment variables per target URL; explicit protocol/ALL_PROXY variables take precedence, and NO_PROXY applies to system routes too. A NO_PROXY variable alone does not disable the OS proxy. `direct` ignores all proxy environment variables. `custom` uses only the saved proxy/bypass list. System PAC on other platforms requires a supported resolver; failures are explicit and can be addressed by selecting a manual proxy. Docker CLI receives the chosen proxy environment, but image transfer belongs to the Docker daemon and needs its own proxy configuration.
-- `export_config {path:string,theme?:"system"|"light"|"dark"}` -> `{path,mcpCount,skillCount}`. Write a portable JSON backup to the selected absolute path outside the live library and Agent configuration, with `<library root>/config.json` as the one allowed destination inside the library. Uses a private atomic file; credentials are included. Contains schema format/version, export timestamp, original home/root/platform, desired MCP entries, Skill metadata and base64 file contents with executable flags, proxy policy and optional theme. Excludes applied ownership records and derived states. Format and restore implementation come from the vendored siu backup module (`core/upstream/backup.rs`); the desktop adds its optional theme and maps typed results to this protocol. CLI exports omit theme; importing them preserves the desktop theme. Portable proxy settings are carried using the shared format, independently of the GUI editor's routing validation. Limit 128 MiB JSON, 64 MiB decoded Skill content, 20,000 files; reject unsafe/nonportable paths, directory links and external links instead of silently omitting content.
-- `preview_config {path:string}` -> `{path,digest,exportedAt,mcpCount,skillCount,issues:string[],theme?:string|null}`. Validate a backup and destination collisions, return a SHA-256 digest and a bounded summary without credentials. Undetected known Agents retain assignments and produce warnings. Unknown/invalid targets are rejected.
-- `import_config {path:string,digest:string}` -> `MutationResult & {theme?:string|null}`. Re-read and verify the preview digest; validate and stage files, then save the current library as `backups/config-*.json` before replacing managed desired state. Retain destination ownership to retract old entries, rebuild Skill links, rebase original home/root prefixes in commands, arguments, environment paths and local Skill sources, and restore proxy settings. Local persistence errors roll back staged replacements; Agent sync failures return issues and can be retried with `sync`. Preserve unrelated unmanaged Agent entries; reject unmanaged same-name MCP collisions. All three configuration transfer methods run under the mutation lock for consistent state and use the 3-minute desktop timeout.
-- `sync {}` -> MutationResult. Explicit retry of desired state after a partial write failure.
-- `save_server {server:Server,agents:string[],oldName?:string,origin?:string}` -> MutationResult. Add or edit/rename without changing enabled state when editing. Reject unrelated unmanaged name collisions rather than overwriting them; explicit import is required.
-- `set_agents {kind:"mcp"|"skills",name:string,agents:string[]}` -> MutationResult. Retain global enabled state.
-- `set_enabled {kind,name,enabled:boolean}` -> MutationResult.
-- `delete {kind,name}` -> MutationResult; prune only after successful sync and preserve external resources.
-- `clear {kind:"mcp"|"skills"}` -> MutationResult. Remove every managed resource of this kind and retract its applied entries in one transaction; retain unmanaged resources and backups. The UI requires a confirmation showing the affected resource count.
-- `import {kind,name}` -> MutationResult; rescan actual unmanaged entries rather than trusting supplied file paths.
-- `scan_skills {source:string}` -> ScanResult. Accept GitHub `owner/repo`, URLs, and native local paths (Windows drive, UNC, `~`, relative paths included). SKILL.md selection can be normalized to its parent.
-- `install_skills {token:string,paths:string[],agents:string[]}` -> MutationResult; match the retained scan, reject installed/duplicate names, no arbitrary path traversal.
-- `release_scan {token:string}` -> `{}`. Drop downloaded temp data on cancellation.
-- `skill_content {name:string}` -> `{content:string,path:string}`. Only managed library Skills; bounded 1 MiB; do not accept arbitrary path.
-- `instruction_content {id:string}` returns `{content:string,revision:string}` for a listed user-level instruction file. The editor accepts UTF-8 files up to 1 MiB.
-- `save_instruction {id:string,content:string,revision?:string}` returns `MutationResult`. Omit `revision` to create a file without overwriting an existing file. Editing uses the revision from `instruction_content` and rejects changes made by another program since the file was read.
-- `delete_instruction {id:string}` returns `MutationResult` after deleting the listed file. When the path is a symlink, deletion removes the link itself. All three methods resolve the ID against the current list of supported files.
-- `discover {kind:"mcp"|"skills",query:string,refresh?:boolean}` -> `{servers:MarketServer[],skills:MarketSkill[],warnings:string[],cached:boolean}`. MCP featured list first, Registry search for non-empty query, dedup. Skills popular / search using upstream, cache fallback with explicit warnings on network failure. Empty arrays on irrelevant branch. Search must not block local mutations.
-- `install_server {id:string,values:Record<string,string>,agents:string[],name?:string}` -> MutationResult. Use actual previously discovered/featured server metadata; validate all required inputs; fill using upstream `MarketServer.fill`. Keep descriptor cache in memory from discovery, bounded. Do not accept arbitrary executable payload as a market result. Manual setup uses save_server.
-- `update {kind:"mcp"|"skills",name?:string}` -> MutationResult. With name update only that resource; otherwise all. Use upstream update planning and report results. Never update/reinstall the GUI through cargo.
+- `discover {kind,query,refresh?}` returns `{servers:MarketServer[],skills:MarketSkill[],warnings:string[],cached:boolean}`. An empty MCP query returns featured entries. A nonempty MCP query also searches the official Registry. Skills queries use skills.sh, with cached results when available. Check `warnings` for degraded results.
+- `MarketServer` contains `id`, `title`, `description`, `publisher`, `homepage`, `server`, `inputs`, and `featured`. Each input contains `key`, `place` (`env`, `header`, or `arg`), `label`, `hint`, `secret`, `required`, and `format`. A `MarketSkill` contains `source`, `skillId`, `name`, `installs`, and `isOfficial`.
+- `install_server {id,values,agents,name?}` returns `MutationResult`. Use a featured or previously discovered `id`. `values` maps input keys to strings. The core fills the retained descriptor and validates required values and compatible targets.
+- `scan_skills {source}` accepts a GitHub `owner/repo`, a GitHub URL, or a local directory. Use a platform-native absolute path or an explicit local prefix such as `./` or `~/`. A local `SKILL.md` resolves to its directory. The result is `{token,source,skills:{name,description,path,installed}[]}`. Each service retains at most eight scans for up to 30 minutes.
+- `install_skills {token,paths,agents}` returns `MutationResult`. The `paths` must come from the retained scan. Existing and duplicate Skills are rejected.
+- `release_scan {token}` returns `{}` and frees temporary data. `skill_content {name}` returns `{content,path}` for a managed Skill's `SKILL.md` up to 1 MiB.
 
-## Desktop helpers (Go service methods)
+## Proxy settings
 
-These are ordinary mygo bound methods, separate from the core protocol:
+`proxy_settings {}` returns `ProxySettings`. `set_proxy_settings {proxy}` validates and atomically stores the policy in `<root>/proxy.json`. `ProxySettings` has `mode`, `url`, and `noProxy`. The default mode is `system`, with empty `url` and `noProxy`. Proxy credentials travel through the explicit settings methods and backup files.
 
-- `PickDirectory(): Promise<string>` returns a selected native directory, empty on cancel.
-- `PickConfigFile(): Promise<string>` selects a JSON configuration backup, empty on cancel.
-- `PickConfigDestination(): Promise<string>` selects the JSON export destination with native overwrite confirmation, empty on cancel.
-- `OpenPath(path:string): Promise<void>` opens an existing file/directory with the OS. Validate path, never invoke a shell.
-- `OpenURL(url:string): Promise<void>` allow http/https only.
-- `Info(): Promise<{os,arch,version}>`.
-- `SetTheme(theme:"system"|"light"|"dark"): Promise<void>`.
+- `system` uses `NO_PROXY` bypasses, then `HTTP_PROXY` or `HTTPS_PROXY` with `ALL_PROXY` as fallback, then the host's configured proxy endpoints on macOS or Windows. Lowercase environment variables are accepted. Linux uses the environment for system routing. For PAC/WPAD-only environments, provide an explicit proxy endpoint.
+- `custom` accepts `http://`, `https://`, `socks5://`, or `socks5h://`, with optional percent-encoded credentials and a comma-separated bypass list of hostnames, IPs or CIDRs.
+- `direct` uses a direct connection. Changes affect subsequent requests. The Docker daemon needs its own proxy configuration for image transfers.
 
-No production HTTP API or localhost listener is needed. A development/test-only loopback harness may serve these requests for browser automation, with explicit test-home isolation, origin validation and no production build inclusion.
+[Proxy implementation](../internal/core/proxy.go)
+
+## Backup transfer
+
+All three methods take an absolute `path`. The format is `siu-gui-backup` v1 and includes desired MCP and Skills state, Skill files, source paths, and proxy policy, with optional desktop theme. It carries credentials and uses private atomic writes for exports. Limits are 128 MiB for the JSON, 64 MiB for decoded Skill files, and 20,000 files. [Backup implementation](../internal/core/backup.go) · [User guide](backup.md)
+
+| Method and params             | Result and behavior                                                                                                                                                                                                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `export_config {path,theme?}` | `{path,mcpCount,skillCount}`. The permitted location within the library is `<root>/config.json`. Destinations in Agent MCP or Skills configuration are protected.                                                                                                                        |
+| `preview_config {path}`       | `{path,digest,exportedAt,mcpCount,skillCount,issues,theme}`. `theme` can be `null`. Validate the backup and check for collisions. Keep the SHA-256 digest for import.                                                                                                                    |
+| `import_config {path,digest}` | `MutationResult`. Verify the original file's digest, take a safety backup in `backups/config-*.json`, replace the managed state, and sync Agents. Preserve unrelated unmanaged resources. Local persistence failures roll back staged changes. Use `sync` to retry partial Agent writes. |
+
+`snapshot` checks `<root>/config.json` and applies new or changed content using the same restore path. The shared `config.applied.json` receipt prevents reapplying an unchanged file. Exporting the default backup leaves the receipt untouched. Invalid files appear in `snapshot.issues`.
+
+The terminal service omits instructions from snapshots and skips a top-level `instructions` field if present in an input backup. The digest still covers the original bytes. Current exports from both clients contain managed resources and omit instruction files. The desktop applies a restored theme if the backup includes one.
+
+## Desktop-only calls
+
+The desktop `instructions` snapshot array lists user-level Markdown files as `{id,agent,name,path,status,issue?}`. Status is `available`, `missing`, or `unavailable`.
+
+- `instruction_content {id}` returns `{content,revision}` for a supported UTF-8 file up to 1 MiB.
+- `save_instruction {id,content,revision?}` returns `MutationResult`. Omit `revision` to create a missing file. Supply it when editing to detect concurrent changes.
+- `delete_instruction {id}` returns `MutationResult`. Deleting a symlink removes the link itself. The core resolves IDs against the currently supported files.
+
+The generated mygo client also exposes native helpers for picking a directory, choosing an import file or export destination, opening an existing path or an HTTP(S) URL, reading app info, and setting the desktop theme. Dialog cancellation returns an empty path. [Generated client](../src/mygo.ts)
