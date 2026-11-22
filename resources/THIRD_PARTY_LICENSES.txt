@@ -52,7 +52,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ==============================================================================
-siu-project 0.0.7 [MIT]
+siu-project 0.0.8 [MIT]
 ==============================================================================
 
 LICENSE

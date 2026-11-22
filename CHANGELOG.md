@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.0.8
 
 - Added `siu-tui` for managing MCP services and Skills from a terminal or over SSH, with the shared Siu resource library, Agent assignments, proxy settings and portable backups. Standalone archives cover macOS, Windows and Linux on x64 and ARM64.
 - Disabled autocorrect in desktop configuration fields to preserve typed commands, paths and identifiers.
+- Renamed the GitHub repository to `siu-project` and updated the desktop app’s links. Desktop downloads now use the `siu-project_` prefix, and v1 backups remain compatible with earlier releases and upstream Siu.
 
 ## 0.0.7
 
