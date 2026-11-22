@@ -1,4 +1,4 @@
-// Command siu-gui is the mygo desktop shell: it binds the Desktop service
+// Command siu-project is the mygo desktop shell: it binds the Desktop service
 // (see desktop.go and docs/protocol.md) and shows the frontend in a single
 // native window with platform window controls and a custom 48px header.
 package main
@@ -14,7 +14,7 @@ import (
 	"github.com/nicholasxjy/siu-project/internal/core"
 )
 
-// mainWindowState guards the single window siu-gui shows: openMainWindow
+// mainWindowState guards the single window siu-project shows: openMainWindow
 // reuses it if still open, so a second launch or a Dock click never opens
 // a duplicate. Main-thread only in practice (every caller runs from a
 // mygo callback), but guarded anyway since OnSecondInstance delivers on

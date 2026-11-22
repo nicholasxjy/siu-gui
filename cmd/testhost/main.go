@@ -1,7 +1,7 @@
 // Command testhost is a development/test-only loopback HTTP server that
 // lets browser-driven E2E tests exercise the real Go core service
 // without a mygo native window (see docs/protocol.md's closing note).
-// vite.config.ts proxies /__test/* here when SIU_GUI_BROWSER_TEST=1, for
+// vite.config.ts proxies /__test/* here when SIU_PROJECT_BROWSER_TEST=1, for
 // the Vite dev server at http://127.0.0.1:5173 only.
 //
 // It is never built into the production app: `mygo build` only compiles
@@ -9,7 +9,7 @@
 // solely for `go run ./cmd/testhost` during local/CI browser testing.
 //
 // Safety is load-bearing, not incidental: it refuses to start unless
-// SIU_GUI_TEST_HOME is an explicit absolute path distinct from the real
+// SIU_PROJECT_TEST_HOME is an explicit absolute path distinct from the real
 // home directory (so a stray run can never read or write the operator's
 // real agent configuration), it binds 127.0.0.1 only, it rejects anything
 // but the Vite dev server's Origin, and OpenPath/OpenURL/PickDirectory
@@ -37,7 +37,7 @@ import (
 )
 
 // listenAddr is fixed, not configurable: docs/protocol.md and
-// vite.config.ts's SIU_GUI_BROWSER_TEST proxy both hardcode it, and nothing
+// vite.config.ts's SIU_PROJECT_BROWSER_TEST proxy both hardcode it, and nothing
 // in this program should make it easy to accidentally widen that.
 const listenAddr = "127.0.0.1:47832"
 
@@ -80,7 +80,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("testhost: %v", err)
 	}
-	log.Printf("testhost: SIU_GUI_TEST_HOME=%s", testHome)
+	log.Printf("testhost: SIU_PROJECT_TEST_HOME=%s", testHome)
 
 	svc := core.NewService("dev")
 	defer svc.Close()
@@ -117,15 +117,15 @@ func main() {
 	}
 }
 
-// validatedTestHome reads and validates SIU_GUI_TEST_HOME: it must be
+// validatedTestHome reads and validates SIU_PROJECT_TEST_HOME: it must be
 // set, absolute, and must not resolve to the real home directory.
 func validatedTestHome() (string, error) {
-	raw := os.Getenv("SIU_GUI_TEST_HOME")
+	raw := os.Getenv("SIU_PROJECT_TEST_HOME")
 	if raw == "" {
-		return "", errors.New("SIU_GUI_TEST_HOME must be set to an absolute path before starting testhost; it must differ from the real home directory")
+		return "", errors.New("SIU_PROJECT_TEST_HOME must be set to an absolute path before starting testhost; it must differ from the real home directory")
 	}
 	if !filepath.IsAbs(raw) {
-		return "", fmt.Errorf("SIU_GUI_TEST_HOME must be an absolute path, got %q", raw)
+		return "", fmt.Errorf("SIU_PROJECT_TEST_HOME must be an absolute path, got %q", raw)
 	}
 	testHome := filepath.Clean(raw)
 
@@ -136,7 +136,7 @@ func validatedTestHome() (string, error) {
 	realHome = filepath.Clean(realHome)
 
 	if samePath(testHome, realHome) {
-		return "", fmt.Errorf("SIU_GUI_TEST_HOME (%s) must not be the real home directory", testHome)
+		return "", fmt.Errorf("SIU_PROJECT_TEST_HOME (%s) must not be the real home directory", testHome)
 	}
 	return testHome, nil
 }

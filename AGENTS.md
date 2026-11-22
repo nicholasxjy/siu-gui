@@ -5,7 +5,7 @@ Siu manages MCP servers and Skills across coding agents. The React/mygo desktop 
 ## Development and verification
 
 - Install frontend dependencies with `bun install --frozen-lockfile`, then launch the desktop app with `bun run dev`. Run the headless terminal app with `go run ./cmd/siu-tui`. See [build and distribution](docs/building.md) for toolchain, platform dependencies, packaging, and releases.
-- Before manually launching either client for testing, set `SIU_GUI_TEST_HOME` to a fresh absolute scratch path. This isolates both the library and agent directories, including from `SIU_HOME` and per-agent overrides. Startup and refresh can restore a backup and write agent configuration. See [isolated test setup](docs/verification.md#用隔离目录手动验证) for sample agent directories and packaged-app checks.
+- Before manually launching either client for testing, set `SIU_PROJECT_TEST_HOME` to a fresh absolute scratch path. This isolates both the library and agent directories, including from `SIU_HOME` and per-agent overrides. Startup and refresh can restore a backup and write agent configuration. See [isolated test setup](docs/verification.md#用隔离目录手动验证) for sample agent directories and packaged-app checks.
 - Run `go test -race ./...` for Go changes (`go test ./...` on Windows ARM64), `bun run typecheck` and `bun run test` for frontend changes, and `bun run test:build` for packaging changes. See [verification](docs/verification.md) for browser E2E, online discovery, and native checks. Browser E2E uses the real Go core through the loopback-only `cmd/testhost` adapter, with substitutes for native dialogs.
 
 ## Where changes belong

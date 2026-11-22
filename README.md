@@ -15,9 +15,9 @@
 
 ## 安装与启动
 
-按系统和 CPU 架构选择安装包。Intel Mac 选 `x64`，Apple Silicon 选 `arm64`。Windows 和 Linux 使用与机器架构对应的 `x64` 或 `arm64` 包。
+按系统和 CPU 架构选择安装包。Intel Mac 选 `x64`，Apple Silicon 选 `arm64`。Windows 和 Linux 使用与机器架构对应的 `x64` 或 `arm64` 包。桌面包前缀从下一个发行版起改为 `siu-project_`，较早版本可按平台和扩展名查找。
 
-| 平台    | 桌面版 `siu-gui_…`                             | 终端版 `siu-tui_…`                    |
+| 平台    | 桌面版                                         | 终端版 `siu-tui_…`                    |
 | ------- | ---------------------------------------------- | ------------------------------------- |
 | macOS   | `.dmg`，另有 Universal DMG 和 ZIP              | `.tar.gz`，按架构选择                 |
 | Windows | `_setup.exe`                                   | `.zip`                                |

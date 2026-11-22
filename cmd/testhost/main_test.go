@@ -26,14 +26,14 @@ func withEnv(t *testing.T, key, value string) {
 }
 
 func TestValidatedTestHomeRejectsUnset(t *testing.T) {
-	withEnv(t, "SIU_GUI_TEST_HOME", "")
+	withEnv(t, "SIU_PROJECT_TEST_HOME", "")
 	if _, err := validatedTestHome(); err == nil {
-		t.Fatal("validatedTestHome with unset SIU_GUI_TEST_HOME: want error, got nil")
+		t.Fatal("validatedTestHome with unset SIU_PROJECT_TEST_HOME: want error, got nil")
 	}
 }
 
 func TestValidatedTestHomeRejectsRelative(t *testing.T) {
-	withEnv(t, "SIU_GUI_TEST_HOME", "relative/path")
+	withEnv(t, "SIU_PROJECT_TEST_HOME", "relative/path")
 	if _, err := validatedTestHome(); err == nil {
 		t.Fatal("validatedTestHome with relative path: want error, got nil")
 	}
@@ -44,7 +44,7 @@ func TestValidatedTestHomeRejectsRealHome(t *testing.T) {
 	if err != nil {
 		t.Skip("no home directory to compare against on this system")
 	}
-	withEnv(t, "SIU_GUI_TEST_HOME", realHome)
+	withEnv(t, "SIU_PROJECT_TEST_HOME", realHome)
 	if _, err := validatedTestHome(); err == nil {
 		t.Fatal("validatedTestHome with the real home directory: want error, got nil")
 	}
@@ -55,7 +55,7 @@ func TestValidatedTestHomeRejectsRealHomeTrailingSlash(t *testing.T) {
 	if err != nil {
 		t.Skip("no home directory to compare against on this system")
 	}
-	withEnv(t, "SIU_GUI_TEST_HOME", realHome+string(filepath.Separator))
+	withEnv(t, "SIU_PROJECT_TEST_HOME", realHome+string(filepath.Separator))
 	if _, err := validatedTestHome(); err == nil {
 		t.Fatal("validatedTestHome with the real home directory (trailing slash): want error, got nil")
 	}
@@ -63,7 +63,7 @@ func TestValidatedTestHomeRejectsRealHomeTrailingSlash(t *testing.T) {
 
 func TestValidatedTestHomeAcceptsDistinctAbsolutePath(t *testing.T) {
 	dir := t.TempDir()
-	withEnv(t, "SIU_GUI_TEST_HOME", dir)
+	withEnv(t, "SIU_PROJECT_TEST_HOME", dir)
 	got, err := validatedTestHome()
 	if err != nil {
 		t.Fatalf("validatedTestHome(%q): unexpected error: %v", dir, err)

@@ -13,7 +13,7 @@ import type {
   Snapshot,
 } from "../src/types";
 
-const home = await mkdtemp(join(tmpdir(), "siu-gui-online-"));
+const home = await mkdtemp(join(tmpdir(), "siu-project-online-"));
 await mkdir(join(home, ".claude"), { recursive: true });
 const hostBin = join(
   home,
@@ -47,7 +47,7 @@ async function start(offline = false) {
     cwd: REPO_ROOT,
     env: {
       ...proxyEnv,
-      SIU_GUI_TEST_HOME: home,
+      SIU_PROJECT_TEST_HOME: home,
     },
     stdio: "pipe",
   });

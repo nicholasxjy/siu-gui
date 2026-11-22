@@ -116,7 +116,7 @@ func TestDesktopOpenURLRejectsNonHTTP(t *testing.T) {
 		"javascript:alert(1)",
 		"file:///etc/passwd",
 		"ftp://example.com/file",
-		"siu-gui://open",
+		"siu-project://open",
 		"not a url",
 		"",
 	} {

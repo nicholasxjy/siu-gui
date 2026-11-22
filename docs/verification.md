@@ -17,15 +17,15 @@ Go 备份兼容样例位于 [internal/core/testdata/siu-backup-v1.json](../inter
 
 ## 用隔离目录手动验证
 
-使用独立的绝对路径作为 `SIU_GUI_TEST_HOME`。共享核心会在其中查找 Agent 配置，并将资源库放在该目录下的 `.siu`，忽略日常的 `SIU_HOME` 和 Agent 路径环境变量。下面的示例预建一个 Claude Code 测试目录，可用于验证分配和实际写入。
+使用独立的绝对路径作为 `SIU_PROJECT_TEST_HOME`。共享核心会在其中查找 Agent 配置，并将资源库放在该目录下的 `.siu`，忽略日常的 `SIU_HOME` 和 Agent 路径环境变量。下面的示例预建一个 Claude Code 测试目录，可用于验证分配和实际写入。
 
 ```sh
 siu_test_home="$(mktemp -d)"
 mkdir -p "$siu_test_home/.claude"
-SIU_GUI_TEST_HOME="$siu_test_home" go run ./cmd/siu-tui
+SIU_PROJECT_TEST_HOME="$siu_test_home" go run ./cmd/siu-tui
 ```
 
-也可以在解压目录用 `SIU_GUI_TEST_HOME="$siu_test_home" ./siu-tui` 测试发行包。桌面版使用相同环境变量，例如 `SIU_GUI_TEST_HOME="$siu_test_home" ./build/darwin-arm64/Siu.app/Contents/MacOS/Siu`。若要验证桌面版和终端版共用资源库，先退出第一个客户端，再用同一路径启动第二个。
+也可以在解压目录用 `SIU_PROJECT_TEST_HOME="$siu_test_home" ./siu-tui` 测试发行包。桌面版使用相同环境变量，例如 `SIU_PROJECT_TEST_HOME="$siu_test_home" ./build/darwin-arm64/Siu.app/Contents/MacOS/Siu`。若要验证桌面版和终端版共用资源库，先退出第一个客户端，再用同一路径启动第二个。
 
 ## 浏览器与联网测试
 

@@ -4,7 +4,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __SIU_BROWSER_TEST__: JSON.stringify(
-      process.env.SIU_GUI_BROWSER_TEST === "1",
+      process.env.SIU_PROJECT_BROWSER_TEST === "1",
     ),
   },
   server: {
@@ -12,7 +12,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy:
-      process.env.SIU_GUI_BROWSER_TEST === "1"
+      process.env.SIU_PROJECT_BROWSER_TEST === "1"
         ? { "/__test": "http://127.0.0.1:47832" }
         : undefined,
   },

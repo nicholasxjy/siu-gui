@@ -72,7 +72,7 @@ async function createIsolatedBuildRoot() {
   await writeFile(
     join(root, "package.json"),
     JSON.stringify({
-      name: "siu-gui",
+      name: "siu-project",
       version: STUB_VERSION,
       private: true,
       type: "module",

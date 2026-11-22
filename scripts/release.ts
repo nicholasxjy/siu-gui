@@ -53,7 +53,7 @@ export async function stageReleaseArtifacts(options: {
       source: join(options.buildDirectory, candidates[0]!.name),
       target: join(
         options.outputDirectory,
-        `siu-gui_${options.version}_${target}${suffix}`,
+        `siu-project_${options.version}_${target}${suffix}`,
       ),
     };
   });

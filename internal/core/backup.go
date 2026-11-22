@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	backupFormat        = "siu-gui-backup"
-	MaxBackupBytes      = 128 * 1024 * 1024
-	maxBackupContent    = 64 * 1024 * 1024
-	maxBackupFiles      = 20_000
-	maxBackupPathDepth  = 64
-	maxAppliedBytes     = 4096
+	backupFormat       = "siu-gui-backup" // Shared with older releases and upstream siu.
+	MaxBackupBytes     = 128 * 1024 * 1024
+	maxBackupContent   = 64 * 1024 * 1024
+	maxBackupFiles     = 20_000
+	maxBackupPathDepth = 64
+	maxAppliedBytes    = 4096
 )
 
 type portableBackup struct {

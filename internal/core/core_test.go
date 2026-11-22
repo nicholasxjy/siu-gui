@@ -20,6 +20,22 @@ import (
 	"time"
 )
 
+func TestResolvePrefersNewTestHomeAndSupportsLegacy(t *testing.T) {
+	legacyHome := t.TempDir()
+	t.Setenv("SIU_GUI_TEST_HOME", legacyHome)
+	t.Setenv("SIU_PROJECT_TEST_HOME", "")
+	t.Setenv("SIU_HOME", t.TempDir())
+	if got := Resolve(); got.Env.Home != legacyHome || got.Root != filepath.Join(legacyHome, ".siu") {
+		t.Fatalf("legacy test home resolved to home %q and library %q", got.Env.Home, got.Root)
+	}
+
+	testHome := t.TempDir()
+	t.Setenv("SIU_PROJECT_TEST_HOME", testHome)
+	if got := Resolve(); got.Env.Home != testHome || got.Root != filepath.Join(testHome, ".siu") {
+		t.Fatalf("new test home resolved to home %q and library %q", got.Env.Home, got.Root)
+	}
+}
+
 func TestMCPFormatsRoundTripAndTOMLPreservation(t *testing.T) {
 	dir := t.TempDir()
 

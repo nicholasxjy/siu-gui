@@ -16,16 +16,16 @@ import { resolve, join } from "node:path";
 import type { ChildProcess } from "node:child_process";
 import type { Snapshot } from "../src/types";
 const root = resolve(import.meta.dir, "..");
-const home = await mkdtemp(join(tmpdir(), "siu-gui-e2e-"));
+const home = await mkdtemp(join(tmpdir(), "siu-project-e2e-"));
 const artifacts = join(root, ".artifacts", "e2e");
 await mkdir(artifacts, { recursive: true });
-const session = "siu-gui-e2e-" + process.pid;
+const session = "siu-project-e2e-" + process.pid;
 const children: ChildProcess[] = [];
 const checks: string[] = [];
 const env = {
   ...process.env,
-  SIU_GUI_TEST_HOME: home,
-  SIU_GUI_BROWSER_TEST: "1",
+  SIU_PROJECT_TEST_HOME: home,
+  SIU_PROJECT_BROWSER_TEST: "1",
 };
 const browserBin = process.env.AGENT_BROWSER_BIN || "npx";
 const browserPrefix = process.env.AGENT_BROWSER_BIN

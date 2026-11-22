@@ -91,7 +91,7 @@ await license(
   "LobeHub ea434b96e75813517b377825e01c0df61dee8836; Pi pi.dev",
   join(root, "resources", "agents"),
 );
-await license("siu-gui", pkg.version, root, "MIT");
+await license(pkg.name, pkg.version, root, "MIT");
 addSection(
   "siu upstream",
   "06333e8cbd6517b87bd918f351acf94fb678e20f; backup.rs: 1a3a7ef32a3c4dd9115da2e0b31fdc6680b79fdf",
@@ -122,6 +122,6 @@ if (missing.length)
 await mkdir(join(root, "resources"), { recursive: true });
 await writeFile(
   join(root, "resources", "THIRD_PARTY_LICENSES.txt"),
-  "Siu GUI — third party license notices\n\n" + sections.join("\n\n"),
+  "Siu — third party license notices\n\n" + sections.join("\n\n"),
 );
 console.log("Collected " + sections.length + " component license sections.");

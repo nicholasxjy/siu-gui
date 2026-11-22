@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "siu-gui",
+      "name": "siu-project",
       "dependencies": {
         "lucide-react": "^1.70.0",
         "mygo-runtime": "0.10.0",

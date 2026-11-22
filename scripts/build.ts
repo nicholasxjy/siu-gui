@@ -243,7 +243,7 @@ async function main(): Promise<void> {
       "--sequesterRsrc",
       "--keepParent",
       join(directory, "Siu.app"),
-      join(directory, `siu-gui_${version}_macos_universal.zip`),
+      join(directory, `siu-project_${version}_macos_universal.zip`),
     ]);
   }
 

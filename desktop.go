@@ -42,7 +42,7 @@ func (d *Desktop) coreService() (*core.Service, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	if d.core == nil {
-		return nil, errors.New("siu-gui: the desktop backend is not ready yet")
+		return nil, errors.New("siu-project: the desktop backend is not ready yet")
 	}
 	return d.core, nil
 }
@@ -160,10 +160,10 @@ func (d *Desktop) PickConfigDestination(ctx context.Context) (string, error) {
 // exist instead of letting the OS decide what an unknown path means.
 func (d *Desktop) OpenPath(path string) error {
 	if path == "" {
-		return errors.New("siu-gui: OpenPath: path is required")
+		return errors.New("siu-project: OpenPath: path is required")
 	}
 	if _, err := os.Stat(path); err != nil {
-		return fmt.Errorf("siu-gui: OpenPath: %w", err)
+		return fmt.Errorf("siu-project: OpenPath: %w", err)
 	}
 	return mygo.Shell.OpenPath(path)
 }
@@ -174,10 +174,10 @@ func (d *Desktop) OpenPath(path string) error {
 func (d *Desktop) OpenURL(rawURL string) error {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return fmt.Errorf("siu-gui: OpenURL: %w", err)
+		return fmt.Errorf("siu-project: OpenURL: %w", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("siu-gui: OpenURL: unsupported scheme %q, only http and https are allowed", u.Scheme)
+		return fmt.Errorf("siu-project: OpenURL: unsupported scheme %q, only http and https are allowed", u.Scheme)
 	}
 	return mygo.Shell.OpenExternal(rawURL)
 }
@@ -206,7 +206,7 @@ func (d *Desktop) SetTheme(theme string) error {
 	case "dark":
 		mygo.Theme.SetSource(mygo.ThemeDark)
 	default:
-		return fmt.Errorf("siu-gui: SetTheme: unknown theme %q, want system, light or dark", theme)
+		return fmt.Errorf("siu-project: SetTheme: unknown theme %q, want system, light or dark", theme)
 	}
 	return nil
 }

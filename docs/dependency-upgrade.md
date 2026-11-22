@@ -89,12 +89,12 @@ Bun 的 CI 版本更新到 **1.4.4**，Node 更新到 **26**；Go 最低版本�
 | `bun run build --platform darwin/arm64` | 通过：生成 `Siu.app` 与 `siu-0.0.4-arm64.dmg` |
 | 原生 WebView 冒烟验证 | 通过：8 项检查，含启动、真实 IPC、深浅主题、三个原生选择器及取消返回、单实例复用、正常退出 |
 | 应用签名、DMG 校验与架构检查 | 通过：签名与镜像校验成功，主程序和 Rust sidecar 均为 arm64 |
-| `bun scripts/release.ts --platform darwin/arm64` | 通过：映射为 `siu-gui_0.0.4_macos_arm64.dmg` |
+| `bun scripts/release.ts --platform darwin/arm64` | 通过：生成版本为 `0.0.4` 的 macOS ARM64 发布用 DMG |
 | `bun run licenses` / `git diff --check` | 通过 |
 
 测试和构建输出保存在 `.artifacts/dependency-upgrade/`；浏览器 E2E 的结果与截图在 `.artifacts/e2e/`。
 
-原生检查使用 Go overlay 构建当前应用，额外包含官方 automation 插件、内嵌生产前端以及隔离路径初始化。这些验证入口不进入生产源码或发布包。Rust 使用临时 `SIU_GUI_TEST_HOME`；MyGO 的 user-data/cache/logs 也使用同一个临时目录。原生截图和 JSON 检查结果保存在 `.artifacts/dependency-upgrade/`。
+原生检查使用 Go overlay 构建当前应用，额外包含官方 automation 插件、内嵌生产前端以及隔离路径初始化。这些验证入口不进入生产源码或发布包。Rust 使用临时测试目录；MyGO 的 user-data/cache/logs 也使用同一个临时目录。原生截图和 JSON 检查结果保存在 `.artifacts/dependency-upgrade/`。
 
 ## 验证范围
 

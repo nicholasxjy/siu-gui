@@ -69,7 +69,7 @@ describe("release artifacts", () => {
       });
       const expected = [
         ...extensions.map((extension) => [
-          "siu-gui_0.0.1_" +
+          "siu-project_0.0.1_" +
             label +
             (extension === ".exe" ? "_setup.exe" : extension),
           platform + extension,

@@ -379,7 +379,7 @@ export function SettingsPage({
             <div className="setting-row">
               <div>
                 <h3>
-                  siu GUI{" "}
+                  Siu{" "}
                   <span className="quiet">{info.version || APP_VERSION}</span>
                 </h3>
                 <p>

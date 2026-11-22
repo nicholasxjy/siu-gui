@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const TestHomeVar = "SIU_GUI_TEST_HOME"
+const TestHomeVar = "SIU_PROJECT_TEST_HOME"
 
 // Env describes where user files and agent overrides live on this machine.
 type Env struct {
@@ -74,10 +74,15 @@ func EnvRooted(home string) Env {
 	}
 }
 
-// Resolve computes the active Env and library root. When SIU_GUI_TEST_HOME is
+// Resolve computes the active Env and library root. When SIU_PROJECT_TEST_HOME is
 // set, every real per-agent override and SIU_HOME are ignored.
 func Resolve() Resolved {
-	if testHome := os.Getenv(TestHomeVar); testHome != "" {
+	testHome := os.Getenv(TestHomeVar)
+	if testHome == "" {
+		// Keep older test launchers isolated from the user's real configuration.
+		testHome = os.Getenv("SIU_GUI_TEST_HOME")
+	}
+	if testHome != "" {
 		_ = os.MkdirAll(testHome, 0o700)
 		env := EnvRooted(testHome)
 		root := filepath.Join(testHome, ".siu")
