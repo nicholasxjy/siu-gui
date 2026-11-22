@@ -196,17 +196,18 @@ type FoundSkillDTO struct {
 
 // SnapshotDTO matches docs/protocol.md's Snapshot shape.
 type SnapshotDTO struct {
-	AutoConfig  *AppliedConfig  `json:"autoConfig,omitempty"`
-	Home        string          `json:"home"`
-	Root        string          `json:"root"`
-	Platform    string          `json:"platform"`
-	Version     string          `json:"version"`
-	Agents      []AgentDTO      `json:"agents"`
-	MCP         []McpEntryDTO   `json:"mcp"`
-	Skills      []SkillEntryDTO `json:"skills"`
-	FoundMCP    []FoundMcpDTO   `json:"foundMcp"`
-	FoundSkills []FoundSkillDTO `json:"foundSkills"`
-	Issues      []string        `json:"issues"`
+	AutoConfig   *AppliedConfig        `json:"autoConfig,omitempty"`
+	Home         string                `json:"home"`
+	Root         string                `json:"root"`
+	Platform     string                `json:"platform"`
+	Version      string                `json:"version"`
+	Agents       []AgentDTO            `json:"agents"`
+	Instructions []AgentInstructionDTO `json:"instructions"`
+	MCP          []McpEntryDTO         `json:"mcp"`
+	Skills       []SkillEntryDTO       `json:"skills"`
+	FoundMCP     []FoundMcpDTO         `json:"foundMcp"`
+	FoundSkills  []FoundSkillDTO       `json:"foundSkills"`
+	Issues       []string              `json:"issues"`
 }
 
 // ReportDTO matches MutationResult.report.
@@ -347,16 +348,17 @@ func BuildSnapshot(store *Store, home, version string) SnapshotDTO {
 		}
 	}
 	return SnapshotDTO{
-		Home:        home,
-		Root:        store.Root,
-		Platform:    platformName(),
-		Version:     version,
-		Agents:      agents,
-		MCP:         mcpList,
-		Skills:      skillList,
-		FoundMCP:    foundMCP,
-		FoundSkills: foundSkills,
-		Issues:      issues,
+		Home:         home,
+		Root:         store.Root,
+		Platform:     platformName(),
+		Version:      version,
+		Agents:       agents,
+		Instructions: listAgentInstructions(store.Agents, store.env),
+		MCP:          mcpList,
+		Skills:       skillList,
+		FoundMCP:     foundMCP,
+		FoundSkills:  foundSkills,
+		Issues:       issues,
 	}
 }
 

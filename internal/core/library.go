@@ -402,6 +402,7 @@ type Store struct {
 	Root   string
 	Agents []Agent
 	Lib    Library
+	env    Env
 }
 
 // NowUnix returns the current Unix timestamp in seconds.
@@ -440,6 +441,7 @@ func OpenStore(env Env, root string) (*Store, error) {
 		Root:   root,
 		Agents: AllAgents(env),
 		Lib:    lib,
+		env:    env,
 	}, nil
 }
 
