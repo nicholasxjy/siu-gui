@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nicholasxjy/siu-gui/internal/core"
+	"github.com/nicholasxjy/siu-project/internal/core"
 	"github.com/rivo/tview"
 )
 

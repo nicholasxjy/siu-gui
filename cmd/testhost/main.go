@@ -33,7 +33,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nicholasxjy/siu-gui/internal/core"
+	"github.com/nicholasxjy/siu-project/internal/core"
 )
 
 // listenAddr is fixed, not configurable: docs/protocol.md and

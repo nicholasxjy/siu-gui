@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/nicholasxjy/siu-gui/internal/core"
+	"github.com/nicholasxjy/siu-project/internal/core"
 )
 
 type tuiHarness struct {

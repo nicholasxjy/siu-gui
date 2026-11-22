@@ -1,4 +1,4 @@
-module github.com/nicholasxjy/siu-gui
+module github.com/nicholasxjy/siu-project
 
 go 1.27.3
 

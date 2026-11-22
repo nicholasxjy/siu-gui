@@ -18,7 +18,7 @@ import (
 
 	"github.com/egoist/mygo"
 
-	"github.com/nicholasxjy/siu-gui/internal/core"
+	"github.com/nicholasxjy/siu-project/internal/core"
 )
 
 // Desktop is bound under the name "Desktop" (see mygo.BindAs in main.go).

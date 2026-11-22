@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nicholasxjy/siu-gui/internal/core"
+	"github.com/nicholasxjy/siu-project/internal/core"
 )
 
 var version = "dev"

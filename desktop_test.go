@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nicholasxjy/siu-gui/internal/core"
+	"github.com/nicholasxjy/siu-project/internal/core"
 )
 
 func TestRequestTimeout(t *testing.T) {
