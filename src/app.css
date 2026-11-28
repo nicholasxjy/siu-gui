@@ -140,6 +140,12 @@
   border-bottom: 0;
 }
 
+.instruction-row.is-disabled .instruction-agent,
+.instruction-row.is-disabled .instruction-file,
+.instruction-row.is-disabled .instruction-path {
+  opacity: 0.72;
+}
+
 .instruction-main {
   display: flex;
   align-items: flex-start;
@@ -502,5 +508,6 @@
   }
   .instruction-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 }

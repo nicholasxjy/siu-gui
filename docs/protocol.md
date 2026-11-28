@@ -84,10 +84,11 @@ The terminal service omits instructions from snapshots and skips a top-level `in
 
 ## Desktop-only calls
 
-The desktop `instructions` snapshot array lists user-level Markdown files as `{id,agent,name,path,status,issue?}`. Status is `available`, `missing`, or `unavailable`.
+The desktop `instructions` snapshot array lists user-level Markdown files as `{id,agent,name,path,status,issue?}`. Status is `available`, `disabled`, `missing`, or `unavailable`.
 
-- `instruction_content {id}` returns `{content,revision}` for a supported UTF-8 file up to 1 MiB.
-- `save_instruction {id,content,revision?}` returns `MutationResult`. Omit `revision` to create a missing file. Supply it when editing to detect concurrent changes.
-- `delete_instruction {id}` returns `MutationResult`. Deleting a symlink removes the link itself. The core resolves IDs against the currently supported files.
+- `instruction_content {id}` returns `{content,revision}` for an `available` or `disabled` UTF-8 file up to 1 MiB.
+- `save_instruction {id,content,revision?}` returns `MutationResult`. Omit `revision` to create a `missing` file. Supply it when editing an `available` or `disabled` file (preserving its disabled state) to detect concurrent changes.
+- `set_instruction_enabled {id,enabled}` returns `MutationResult`. Disabling renames `<path>` to `<path>.siu-disabled` so Agents stop loading it; enabling renames it back.
+- `delete_instruction {id}` returns `MutationResult`. Deletes the active or `.siu-disabled` file; deleting a symlink removes the link itself. The core resolves IDs against the currently supported files.
 
 The generated mygo client also exposes native helpers for picking a directory, choosing an import file or export destination, opening an existing path or an HTTP(S) URL, reading app info, and setting the desktop theme. Dialog cancellation returns an empty path. [Generated client](../src/mygo.ts)

@@ -20,6 +20,13 @@ const sampleInstructions = (): AgentInstruction[] => [
     status: "available",
   },
   {
+    id: "codex:override",
+    agent: "codex",
+    name: "AGENTS.override.md",
+    path: "/sandbox/.codex/AGENTS.override.md",
+    status: "disabled",
+  },
+  {
     id: "codex:user",
     agent: "codex",
     name: "AGENTS.md",
@@ -66,14 +73,17 @@ describe("AgentInstructions", () => {
   it("渲染各状态条目，隐藏不可用项操作并展示 issue，兼容旧快照", () => {
     setup(sampleInstructions());
     const rows = screen.getAllByRole("listitem");
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
 
     expect(within(rows[0]).getByText("Claude Code")).toBeInTheDocument();
     expect(within(rows[0]).getByText("CLAUDE.md")).toBeInTheDocument();
     expect(
       within(rows[0]).getByText("/sandbox/.claude/CLAUDE.md"),
     ).toBeInTheDocument();
-    expect(within(rows[0]).getByText("已存在")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("已启用")).toBeInTheDocument();
+    expect(
+      within(rows[0]).getByRole("button", { name: /停用/ }),
+    ).toBeInTheDocument();
     expect(
       within(rows[0]).getByRole("button", { name: /编辑/ }),
     ).toBeInTheDocument();
@@ -81,18 +91,32 @@ describe("AgentInstructions", () => {
       within(rows[0]).getByRole("button", { name: /删除/ }),
     ).toBeInTheDocument();
 
+    expect(rows[1]).toHaveClass("is-disabled");
     expect(within(rows[1]).getByText("Codex")).toBeInTheDocument();
-    expect(within(rows[1]).getByText("未创建")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("AGENTS.override.md")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("已停用")).toBeInTheDocument();
     expect(
-      within(rows[1]).getByRole("button", { name: /添加/ }),
+      within(rows[1]).getByRole("button", { name: /启用/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(rows[1]).getByRole("button", { name: /编辑/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(rows[1]).getByRole("button", { name: /删除/ }),
     ).toBeInTheDocument();
 
-    expect(within(rows[2]).getByText("Cursor")).toBeInTheDocument();
-    expect(within(rows[2]).getByText("不可用")).toBeInTheDocument();
+    expect(within(rows[2]).getByText("Codex")).toBeInTheDocument();
+    expect(within(rows[2]).getByText("未创建")).toBeInTheDocument();
     expect(
-      within(rows[2]).getByText("目标路径是目录，无法作为 Markdown 文件读取"),
+      within(rows[2]).getByRole("button", { name: /添加/ }),
     ).toBeInTheDocument();
-    expect(within(rows[2]).queryAllByRole("button")).toHaveLength(0);
+
+    expect(within(rows[3]).getByText("Cursor")).toBeInTheDocument();
+    expect(within(rows[3]).getByText("不可用")).toBeInTheDocument();
+    expect(
+      within(rows[3]).getByText("目标路径是目录，无法作为 Markdown 文件读取"),
+    ).toBeInTheDocument();
+    expect(within(rows[3]).queryAllByRole("button")).toHaveLength(0);
   });
 
   it("旧快照不含 instructions 时展示空状态", () => {
@@ -215,5 +239,77 @@ describe("AgentInstructions", () => {
     );
     expect(onDone).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("点击停用和启用分别调用 set_instruction_enabled，失败后恢复按钮可用状态", async () => {
+    const { mutate, onDone } = setup(sampleInstructions());
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: "停用 Claude Code CLAUDE.md" }),
+    );
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    expect(mutate).toHaveBeenLastCalledWith(
+      "set_instruction_enabled",
+      { id: "claude:user", enabled: false },
+      "停用 Claude Code CLAUDE.md",
+    );
+    expect(onDone).toHaveBeenCalledTimes(1);
+
+    const enableBtn = screen.getByRole("button", {
+      name: "启用 Codex AGENTS.override.md",
+    });
+    await user.click(enableBtn);
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
+    expect(mutate).toHaveBeenLastCalledWith(
+      "set_instruction_enabled",
+      { id: "codex:override", enabled: true },
+      "启用 Codex AGENTS.override.md",
+    );
+    expect(onDone).toHaveBeenCalledTimes(2);
+
+    mutate.mockRejectedValueOnce(new Error("重命名失败"));
+    await user.click(enableBtn);
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(3));
+    expect(onDone).toHaveBeenCalledTimes(2);
+    expect(enableBtn).not.toBeDisabled();
+  });
+
+  it("已停用条目支持编辑与删除，并在弹窗副标题标明已停用", async () => {
+    vi.mocked(api.request).mockResolvedValueOnce({
+      content: "# Disabled Rules",
+      revision: "rev-disabled",
+    });
+    const { mutate } = setup(sampleInstructions());
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: "编辑 Codex AGENTS.override.md" }),
+    );
+    const editDialog = await screen.findByRole("dialog");
+    expect(
+      within(editDialog).getByText("Codex · 用户级指令文件（已停用）"),
+    ).toBeInTheDocument();
+    expect(within(editDialog).getByLabelText("Markdown")).toHaveValue(
+      "# Disabled Rules",
+    );
+    await user.click(within(editDialog).getByRole("button", { name: "取消" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "删除 Codex AGENTS.override.md" }),
+    );
+    const deleteDialog = screen.getByRole("dialog");
+    expect(
+      within(deleteDialog).getByText("Codex · 用户级指令文件（已停用）"),
+    ).toBeInTheDocument();
+    await user.click(
+      within(deleteDialog).getByRole("button", { name: "确认删除" }),
+    );
+    await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
+    expect(mutate).toHaveBeenCalledWith(
+      "delete_instruction",
+      { id: "codex:override" },
+      "删除 Codex AGENTS.override.md",
+    );
   });
 });

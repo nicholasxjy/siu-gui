@@ -12,7 +12,14 @@ import (
 	"unicode/utf8"
 )
 
-const maxInstructionBytes = 1 << 20
+const (
+	maxInstructionBytes       = 1 << 20
+	disabledInstructionSuffix = ".siu-disabled"
+)
+
+func disabledInstructionPath(path string) string {
+	return path + disabledInstructionSuffix
+}
 
 type AgentInstructionDTO struct {
 	ID     string `json:"id"`
@@ -99,7 +106,7 @@ func geminiInstructionNames(dir string) []string {
 		} `json:"context"`
 	}
 	path := filepath.Join(dir, "settings.json")
-	if status, _ := instructionStatus(path); status != "available" {
+	if status, _ := fileStatus(path); status != "available" {
 		return []string{"GEMINI.md"}
 	}
 	data, err := readBounded(path, maxInstructionBytes)
@@ -131,7 +138,7 @@ func listAgentInstructions(agents []Agent, env Env) []AgentInstructionDTO {
 		for _, group := range instructionGroups(agent, env) {
 			for _, name := range group.fileNames() {
 				path := filepath.Join(group.dir, name)
-				status, issue := instructionStatus(path)
+				status, _, issue := instructionEntryStatus(path)
 				files = append(files, AgentInstructionDTO{
 					ID: agent.ID + ":" + path, Agent: agent.ID, Name: name, Path: path,
 					Status: status, Issue: issue,
@@ -150,9 +157,11 @@ func (g instructionGroup) fileNames() []string {
 	entries, _ := os.ReadDir(g.dir)
 	var actual, aliases []string
 	for _, entry := range entries {
-		name := entry.Name()
-		actual = append(actual, name)
-		if slices.Contains(g.aliases, name) {
+		name := strings.TrimSuffix(entry.Name(), disabledInstructionSuffix)
+		if !slices.Contains(actual, name) {
+			actual = append(actual, name)
+		}
+		if slices.Contains(g.aliases, name) && !slices.Contains(aliases, name) {
 			aliases = append(aliases, name)
 		}
 	}
@@ -167,7 +176,7 @@ func (g instructionGroup) fileNames() []string {
 	return append(names, aliases...)
 }
 
-func instructionStatus(path string) (status, issue string) {
+func fileStatus(path string) (status, issue string) {
 	info, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return "missing", ""
@@ -184,30 +193,56 @@ func instructionStatus(path string) (status, issue string) {
 	return "available", ""
 }
 
-func requireInstructionFile(path string) error {
-	status, issue := instructionStatus(path)
-	switch status {
-	case "available":
-		return nil
-	case "missing":
-		return fmt.Errorf("指令文件已不存在：%s", path)
+func instructionEntryStatus(path string) (status, storagePath, issue string) {
+	disabledPath := disabledInstructionPath(path)
+	activeStatus, activeIssue := fileStatus(path)
+	disabledStatus, disabledIssue := fileStatus(disabledPath)
+
+	switch {
+	case activeStatus == "missing" && disabledStatus == "missing":
+		return "missing", path, ""
+	case activeStatus == "available" && disabledStatus == "missing":
+		return "available", path, ""
+	case activeStatus == "missing" && disabledStatus == "available":
+		return "disabled", disabledPath, ""
+	case activeStatus != "missing" && disabledStatus != "missing":
+		return "unavailable", "", fmt.Sprintf("同时存在指令文件和停用文件（%s），请先手动处理冲突。", filepath.Base(disabledPath))
+	case activeStatus == "unavailable":
+		return "unavailable", "", activeIssue
 	default:
-		return errors.New(issue)
+		return "unavailable", "", disabledIssue
 	}
 }
 
-func readInstruction(path string) (instructionContent, error) {
-	if err := requireInstructionFile(path); err != nil {
-		return instructionContent{}, err
+func requireInstructionStorage(path string) (status, storagePath string, err error) {
+	status, storagePath, issue := instructionEntryStatus(path)
+	switch status {
+	case "available", "disabled":
+		return status, storagePath, nil
+	case "missing":
+		return "", "", fmt.Errorf("指令文件已不存在：%s", path)
+	default:
+		return "", "", errors.New(issue)
 	}
-	data, err := readBounded(path, maxInstructionBytes)
+}
+
+func readInstructionFile(storagePath string) (instructionContent, error) {
+	data, err := readBounded(storagePath, maxInstructionBytes)
 	if err != nil {
 		return instructionContent{}, err
 	}
 	if !utf8.Valid(data) {
-		return instructionContent{}, fmt.Errorf("指令文件必须是 UTF-8 文本：%s", path)
+		return instructionContent{}, fmt.Errorf("指令文件必须是 UTF-8 文本：%s", storagePath)
 	}
 	return instructionContent{Content: string(data), Revision: fmt.Sprintf("%x", sha256.Sum256(data))}, nil
+}
+
+func readInstruction(path string) (instructionContent, error) {
+	_, storagePath, err := requireInstructionStorage(path)
+	if err != nil {
+		return instructionContent{}, err
+	}
+	return readInstructionFile(storagePath)
 }
 
 func createInstruction(path, content string) error {
@@ -240,42 +275,99 @@ func (s *Service) hInstruction(method string, params map[string]json.RawMessage)
 		return nil, errors.New("找不到这个 Agent 的指令文件，请刷新列表。")
 	}
 	path := files[index].Path
-	if method == "instruction_content" {
+	switch method {
+	case "instruction_content":
 		return readInstruction(path)
-	}
-	if method == "delete_instruction" {
-		if err := requireInstructionFile(path); err != nil {
+	case "set_instruction_enabled":
+		enabled, err := paramBool(params, "enabled")
+		if err != nil {
 			return nil, err
 		}
-		if err := os.Remove(path); err != nil {
+		status, _, issue := instructionEntryStatus(path)
+		disabledPath := disabledInstructionPath(path)
+		switch status {
+		case "missing":
+			if enabled {
+				return nil, errors.New("指令文件尚未创建，无法启用。")
+			}
+			return nil, errors.New("指令文件尚未创建，无法停用。")
+		case "unavailable":
+			return nil, errors.New(issue)
+		case "available":
+			if enabled {
+				return BuildMutationResult(store, resolved.Env.Home, s.version, Report{Changed: 0}, "已启用指令文件", nil), nil
+			}
+			if _, err := os.Lstat(disabledPath); !errors.Is(err, os.ErrNotExist) {
+				return nil, fmt.Errorf("停用文件已存在，请先手动处理：%s", disabledPath)
+			}
+			if err := os.Rename(path, disabledPath); err != nil {
+				return nil, err
+			}
+			return BuildMutationResult(store, resolved.Env.Home, s.version, Report{Changed: 1}, "已停用指令文件", nil), nil
+		case "disabled":
+			if !enabled {
+				return BuildMutationResult(store, resolved.Env.Home, s.version, Report{Changed: 0}, "已停用指令文件", nil), nil
+			}
+			if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+				return nil, fmt.Errorf("指令文件已存在，请先手动处理：%s", path)
+			}
+			if err := os.Rename(disabledPath, path); err != nil {
+				return nil, err
+			}
+			return BuildMutationResult(store, resolved.Env.Home, s.version, Report{Changed: 1}, "已启用指令文件", nil), nil
+		default:
+			return nil, fmt.Errorf("未知指令文件状态：%s", status)
+		}
+	case "delete_instruction":
+		_, storagePath, err := requireInstructionStorage(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.Remove(storagePath); err != nil {
 			return nil, err
 		}
 		return BuildMutationResult(store, resolved.Env.Home, s.version, Report{Changed: 1}, "已删除指令文件", nil), nil
-	}
-	content, err := paramStr(params, "content")
-	if err != nil {
-		return nil, err
-	}
-	if len(content) > maxInstructionBytes {
-		return nil, errors.New("指令文件不能超过 1 MiB。")
-	}
-	if _, editing := params["revision"]; editing {
-		revision, err := paramStr(params, "revision")
+	default:
+		content, err := paramStr(params, "content")
 		if err != nil {
 			return nil, err
 		}
-		current, err := readInstruction(path)
-		if err != nil {
-			return nil, err
+		if len(content) > maxInstructionBytes {
+			return nil, errors.New("指令文件不能超过 1 MiB。")
 		}
-		if current.Revision != revision {
-			return nil, errors.New("指令文件已被其他程序更改。请保留草稿并重新打开文件。")
+		if _, editing := params["revision"]; editing {
+			revision, err := paramStr(params, "revision")
+			if err != nil {
+				return nil, err
+			}
+			_, storagePath, err := requireInstructionStorage(path)
+			if err != nil {
+				return nil, err
+			}
+			current, err := readInstructionFile(storagePath)
+			if err != nil {
+				return nil, err
+			}
+			if current.Revision != revision {
+				return nil, errors.New("指令文件已被其他程序更改。请保留草稿并重新打开文件。")
+			}
+			if err := WriteAtomic(storagePath, []byte(content)); err != nil {
+				return nil, err
+			}
+		} else {
+			status, _, issue := instructionEntryStatus(path)
+			switch status {
+			case "disabled":
+				return nil, fmt.Errorf("指令文件已存在（当前已停用）：%s", path)
+			case "unavailable":
+				return nil, errors.New(issue)
+			case "available":
+				return nil, fmt.Errorf("指令文件已存在：%s", path)
+			}
+			if err := createInstruction(path, content); err != nil {
+				return nil, err
+			}
 		}
-		if err := WriteAtomic(path, []byte(content)); err != nil {
-			return nil, err
-		}
-	} else if err := createInstruction(path, content); err != nil {
-		return nil, err
+		return BuildMutationResult(store, resolved.Env.Home, s.version, Report{Changed: 1}, "已保存指令文件", nil), nil
 	}
-	return BuildMutationResult(store, resolved.Env.Home, s.version, Report{Changed: 1}, "已保存指令文件", nil), nil
 }

@@ -55,7 +55,7 @@ export interface AgentInstruction {
   agent: string;
   name: string;
   path: string;
-  status: "missing" | "available" | "unavailable";
+  status: "missing" | "available" | "disabled" | "unavailable";
   issue?: string;
 }
 export interface Snapshot {

@@ -24,7 +24,8 @@ const statusMeta: Record<
   AgentInstruction["status"],
   { label: string; className: string }
 > = {
-  available: { label: "已存在", className: "status-pill available" },
+  available: { label: "已启用", className: "status-pill available" },
+  disabled: { label: "已停用", className: "status-pill amber" },
   missing: { label: "未创建", className: "status-pill neutral" },
   unavailable: { label: "不可用", className: "status-pill danger" },
 };
@@ -176,6 +177,25 @@ export function AgentInstructions({
     }
   };
 
+  const toggleEnabled = async (item: AgentInstruction, enabled: boolean) => {
+    if (working) return;
+    setPending(true);
+    const agent = resolveAgent(item.agent);
+    const label = (enabled ? "启用 " : "停用 ") + agent.name + " " + item.name;
+    try {
+      const res = await mutate(
+        "set_instruction_enabled",
+        { id: item.id, enabled },
+        label,
+      );
+      onDone?.(res, label);
+    } catch {
+      /* A persistent error banner contains the details. */
+    } finally {
+      setPending(false);
+    }
+  };
+
   const editorAgent = editor ? resolveAgent(editor.item.agent) : null;
   const deletingAgent = deleting ? resolveAgent(deleting.agent) : null;
 
@@ -184,7 +204,9 @@ export function AgentInstructions({
       <header className="page-head">
         <div>
           <h1>AGENTS.md 管理</h1>
-          <p className="subtitle">保存后直接写入本机的用户级指令文件。</p>
+          <p className="subtitle">
+            保存后直接写入本机的用户级指令文件；停用后暂时不再加载，可随时重新启用。
+          </p>
         </div>
         <div className="actions">
           <button
@@ -205,7 +227,13 @@ export function AgentInstructions({
               const agent = resolveAgent(item.agent);
               const status = statusMeta[item.status];
               return (
-                <li className="instruction-row" key={item.id}>
+                <li
+                  className={
+                    "instruction-row" +
+                    (item.status === "disabled" ? " is-disabled" : "")
+                  }
+                  key={item.id}
+                >
                   <div className="instruction-main">
                     <Avatar agent={agent} />
                     <div className="instruction-info">
@@ -220,8 +248,27 @@ export function AgentInstructions({
                       ) : null}
                     </div>
                   </div>
-                  {item.status === "available" ? (
+                  {item.status === "available" || item.status === "disabled" ? (
                     <div className="instruction-actions">
+                      <button
+                        type="button"
+                        className="btn small"
+                        disabled={working}
+                        aria-label={
+                          (item.status === "disabled" ? "启用 " : "停用 ") +
+                          agent.name +
+                          " " +
+                          item.name
+                        }
+                        onClick={() =>
+                          void toggleEnabled(item, item.status === "disabled")
+                        }
+                      >
+                        <Icon
+                          name={item.status === "disabled" ? "play" : "pause"}
+                        />
+                        {item.status === "disabled" ? "启用" : "停用"}
+                      </button>
                       <button
                         type="button"
                         className="btn small"
@@ -283,7 +330,11 @@ export function AgentInstructions({
           title={
             (editor.mode === "create" ? "添加 " : "编辑 ") + editor.item.name
           }
-          subtitle={editorAgent.name + " · 用户级指令文件"}
+          subtitle={
+            editorAgent.name +
+            " · 用户级指令文件" +
+            (editor.item.status === "disabled" ? "（已停用）" : "")
+          }
           busy={working}
           large
           onClose={closeEditor}
@@ -365,7 +416,11 @@ export function AgentInstructions({
       {deleting && deletingAgent ? (
         <Modal
           title={"删除 " + deleting.name + "？"}
-          subtitle={deletingAgent.name + " · 用户级指令文件"}
+          subtitle={
+            deletingAgent.name +
+            " · 用户级指令文件" +
+            (deleting.status === "disabled" ? "（已停用）" : "")
+          }
           busy={working}
           onClose={closeDelete}
           footer={

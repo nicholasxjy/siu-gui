@@ -79,7 +79,7 @@ func TestTerminalServiceBackupLifecycleAndInstructionsIsolation(t *testing.T) {
 	if _, ok := callOK(t, termSvc, "snapshot", nil)["instructions"]; ok {
 		t.Fatal("terminal snapshot must omit instructions")
 	}
-	for _, m := range []string{"instruction_content", "save_instruction", "delete_instruction"} {
+	for _, m := range []string{"instruction_content", "save_instruction", "delete_instruction", "set_instruction_enabled"} {
 		if errMsg := callErr(t, termSvc, m, map[string]any{"id": instrID, "content": "# x\n"}); !strings.Contains(errMsg, "unknown method") {
 			t.Fatalf("%s error = %q, want unknown method", m, errMsg)
 		}
