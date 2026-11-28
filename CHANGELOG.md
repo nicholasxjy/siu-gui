@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.9
+
+- Added a desktop toggle to disable and re-enable user-level Agent instruction files. Disabled files stay editable in Siu, and re-enabling restores them for the Agent.
+
 ## 0.0.8
 
 - Added `siu-tui` for managing MCP services and Skills from a terminal or over SSH, with the shared Siu resource library, Agent assignments, proxy settings and portable backups. Standalone archives cover macOS, Windows and Linux on x64 and ARM64.
